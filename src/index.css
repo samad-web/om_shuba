@@ -6,13 +6,16 @@
   --primary-dark: #15803d;  /* Deep Green 700 */
   --primary-light: #86efac; /* Bright Green 300 */
   
-  --bg-app: #dcfce7;        /* Fresh Green 100 Background - Saturated but light */
+  --bg-app: #dcfce7;        /* Fresh Green 100 Background */
   --bg-card: #ffffff;
   
   --text-main: #064e3b;     /* Dark Emerald 900 */
-  --text-muted: #3f6212;    /* Olive/Green 700 */
+  --text-muted: #304e3b;    /* Slightly darker for better visibility */
   
   --border: #86efac;        /* Bright Green Border */
+  
+  --header-bg: rgba(255, 255, 255, 0.8);
+  --input-bg: #f8fafc;
   
   --danger: #dc2626;
   --success: #16a34a;
@@ -23,6 +26,28 @@
   --shadow: 0 1px 3px 0 rgba(22, 163, 74, 0.1), 0 1px 2px 0 rgba(22, 163, 74, 0.06);
   --shadow-md: 0 4px 6px -1px rgba(22, 163, 74, 0.1), 0 2px 4px -1px rgba(22, 163, 74, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(22, 163, 74, 0.1), 0 4px 6px -2px rgba(22, 163, 74, 0.05);
+}
+
+[data-theme='dark'] {
+  --primary: #22c55e;
+  --primary-dark: #16a34a;
+  --primary-light: #14532d;
+
+  --bg-app: #052e16;        /* Deep darkest green */
+  --bg-card: #064e3b;       /* Dark Emerald 900 for cards */
+  
+  --text-main: #f0fdf4;     /* Almost white green */
+  --text-muted: #86efac;    /* Light green for muted text */
+  
+  --border: #14532d;        /* Deep green border */
+
+  --header-bg: rgba(5, 46, 22, 0.8);
+  --input-bg: #022c22;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -41,7 +66,7 @@ body {
 h1, h2, h3, h4, h5, h6 {
   margin: 0 0 0.5rem;
   font-weight: 600;
-  color: #0f172a; /* Slate 900 */
+  color: var(--text-main);
   letter-spacing: -0.025em;
 }
 
@@ -105,7 +130,7 @@ input, select, textarea, button {
   padding: 0.625rem 0.875rem;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background-color: #f8fafc;
+  background-color: var(--input-bg);
   transition: all 0.2s;
 }
 .input:focus {
@@ -129,7 +154,7 @@ input, select, textarea, button {
 }
 
 .glass-header {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);

@@ -9,33 +9,37 @@ import TelecallerDashboard from './pages/telecaller/TelecallerDashboard';
 
 // Placeholders for now
 
+import { SettingsProvider } from './context/SettingsContext';
+
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+    <SettingsProvider>
+      <Router>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-          <Route element={<ProtectedRoute />}>
             <Route element={<ProtectedRoute />}>
-              <Route path="/owner" element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route index element={<OwnerDashboard />} />
-              </Route>
+              <Route element={<ProtectedRoute />}>
+                <Route path="/owner" element={<ProtectedRoute allowedRoles={['admin']} />}>
+                  <Route index element={<OwnerDashboard />} />
+                </Route>
 
-              <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']} />}>
-                <Route index element={<AdminDashboard />} />
-              </Route>
+                <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']} />}>
+                  <Route index element={<AdminDashboard />} />
+                </Route>
 
-              <Route path="/telecaller" element={<ProtectedRoute allowedRoles={['telecaller']} />}>
-                <Route index element={<TelecallerDashboard />} />
+                <Route path="/telecaller" element={<ProtectedRoute allowedRoles={['telecaller']} />}>
+                  <Route index element={<TelecallerDashboard />} />
+                </Route>
               </Route>
             </Route>
-          </Route>
 
-          <Route path="/" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </AuthProvider>
-    </Router>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </AuthProvider>
+      </Router>
+    </SettingsProvider>
   );
 }
 

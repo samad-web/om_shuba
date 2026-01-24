@@ -7,9 +7,12 @@ import EnquiryLog from './EnquiryLog';
 import ConversionOverview from './ConversionOverview';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../services/storage';
+import { useSettings } from '../../context/SettingsContext';
+import SettingsToggle from '../../components/SettingsToggle';
 
 const AdminDashboard: React.FC = () => {
     const { user } = useAuth();
+    const { t } = useSettings();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [metrics, setMetrics] = useState({ branchLeads: 0, demosDone: 0, activeProducts: 0 });
 
@@ -40,10 +43,13 @@ const AdminDashboard: React.FC = () => {
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem' }}>Management Console</h2>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem' }}>{t('admin.dashboard_title')}</h2>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Overview of branch operations and inventory state.</p>
                 </div>
-                <button className="btn" onClick={calculateMetrics}>🔄 Refresh Data</button>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <SettingsToggle />
+                    <button className="btn" onClick={calculateMetrics}>🔄 {t('common.search')}</button>
+                </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
@@ -92,7 +98,7 @@ const AdminDashboard: React.FC = () => {
     };
 
     return (
-        <div style={{ display: 'flex', background: '#f8fafc', height: '100vh', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', background: 'var(--bg-app)', height: '100vh', overflow: 'hidden' }}>
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
             <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
                 {renderContent()}

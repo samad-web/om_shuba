@@ -13,7 +13,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendType, spa
         <div className="card" style={{ display: 'flex', justifyContent: 'space-between', padding: '1.25rem' }}>
             <div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 500, marginBottom: '0.25rem' }}>{title}</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem' }}>{value}</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.25rem' }}>{value}</div>
                 <div style={{ fontSize: '0.75rem', color: trendType === 'up' ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
                     {trendType === 'up' ? '↗' : '↘'} {trend} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>from last month</span>
                 </div>

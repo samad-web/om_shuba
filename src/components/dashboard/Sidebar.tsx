@@ -6,32 +6,35 @@ interface SidebarProps {
     setActiveTab: (tab: string) => void;
 }
 
+import { useSettings } from '../../context/SettingsContext';
+
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     const { user, logout } = useAuth();
+    const { t } = useSettings();
 
     const getNavItems = () => {
         if (user?.role === 'admin') { // This is our "Owner" role in mock data
             return [
-                { id: 'dashboard', label: 'Overview', icon: '📊' },
-                { id: 'enquiries', label: 'Enquiry Log', icon: '📑' },
-                { id: 'products', label: 'Products', icon: '📦' },
-                { id: 'branches', label: 'Branches', icon: '🏢' },
+                { id: 'dashboard', label: t('nav.dashboard'), icon: '📊' },
+                { id: 'enquiries', label: t('nav.enquiries'), icon: '📑' },
+                { id: 'products', label: t('nav.products'), icon: '📦' },
+                { id: 'branches', label: t('nav.branches'), icon: '🏢' },
                 { id: 'users', label: 'Staff Management', icon: '👥' },
-                { id: 'settings', label: 'Settings', icon: '⚙️' },
+                { id: 'settings', label: t('common.settings'), icon: '⚙️' },
             ];
         }
         if (user?.role === 'branch_admin') {
             return [
-                { id: 'dashboard', label: 'Branch Overview', icon: '🏢' },
-                { id: 'enquiries', label: 'Branch Enquiries', icon: '📑' },
-                { id: 'products', label: 'Product List', icon: '📦' },
+                { id: 'dashboard', label: t('nav.dashboard'), icon: '🏢' },
+                { id: 'enquiries', label: t('nav.enquiries'), icon: '📑' },
+                { id: 'products', label: t('nav.products'), icon: '📦' },
                 { id: 'conversions', label: 'Closed Deals', icon: '💰' },
             ];
         }
         if (user?.role === 'telecaller') {
             return [
                 { id: 'dashboard', label: 'Capture & Stats', icon: '🖊️' },
-                { id: 'enquiries', label: 'My Enquiries', icon: '🤝' },
+                { id: 'enquiries', label: t('nav.enquiries'), icon: '🤝' },
                 { id: 'conversions', label: 'Closed Deals', icon: '💰' },
             ];
         }
@@ -55,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '3rem' }}>
                 <div style={{ width: '32px', height: '32px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🌿</div>
-                <span style={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.02em' }}>OM SHUBA</span>
+                <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>Om Shuba Agencies</span>
             </div>
 
             <div style={{ fontSize: '0.7rem', color: '#86efac', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem', opacity: 0.8 }}>
@@ -120,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     onMouseOver={(e) => e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                    🚪 Log Out
+                    🚪 {t('common.logout')}
                 </button>
             </div>
         </div>

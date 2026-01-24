@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import SettingsToggle from '../components/SettingsToggle';
+import { useSettings } from '../context/SettingsContext';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -8,37 +10,38 @@ const Login: React.FC = () => {
     const [error, setError] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
+    const { t } = useSettings();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         const success = await login(username, password);
         if (success) {
-            // Navigation is handled by keying off the user state or simple redirection here
-            // But we generally let the ProtectedRoute logic or useEffect handle it, 
-            // or just force push here for simplicity.
-            // We'll rely on the caller to know where to go, but since we don't know the role yet easily here without decoding,
-            // we can just check the storage or wait. 
-            // Actually, useAuth updates state.
-            // Let's simplified:
             const userStr = localStorage.getItem('tc_users');
             const users = userStr ? JSON.parse(userStr) : [];
             const u = users.find((u: any) => u.username === username);
             if (u.role === 'admin') navigate('/owner');
             else navigate('/telecaller');
         } else {
-            setError('Invalid credentials');
+            setError(t('login.error'));
         }
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#e0e7ff' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-app)', gap: '1rem' }}>
+            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}>
+                <SettingsToggle />
+            </div>
+
             <div className="card" style={{ width: '100%', maxWidth: '350px' }}>
-                <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Login</h2>
+                <h2 style={{ textAlign: 'center', marginBottom: '0.25rem' }}>{t('login.title')}</h2>
+                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{t('login.subtitle')}</p>
+
                 {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Username</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>{t('common.username')}</label>
                         <input
                             className="input"
                             type="text"
@@ -48,7 +51,7 @@ const Login: React.FC = () => {
                         />
                     </div>
                     <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Password</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>{t('common.password')}</label>
                         <input
                             className="input"
                             type="password"
@@ -57,7 +60,7 @@ const Login: React.FC = () => {
                         />
                     </div>
                     <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                        Sign In
+                        {t('common.login')}
                     </button>
                 </form>
                 <div style={{ marginTop: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center' }}>

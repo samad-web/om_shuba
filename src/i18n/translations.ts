@@ -1,0 +1,80 @@
+export const translations: Record<string, any> = {
+    en: {
+        common: {
+            login: "Login",
+            logout: "Logout",
+            username: "Username",
+            password: "Password",
+            search: "Search",
+            save: "Save",
+            cancel: "Cancel",
+            delete: "Delete",
+            confirm: "Confirm",
+            actions: "Actions",
+            loading: "Loading...",
+            settings: "Settings",
+            language: "Language",
+            theme: "Theme",
+            light: "Light",
+            dark: "Dark",
+            english: "English",
+            tamil: "Tamil",
+        },
+        nav: {
+            dashboard: "Dashboard",
+            products: "Products",
+            branches: "Branches",
+            enquiries: "Enquiries",
+            account: "Account",
+        },
+        login: {
+            title: "Om Shuba Agencies",
+            subtitle: "Login to access your dashboard",
+            error: "Invalid username or password",
+        },
+        admin: {
+            dashboard_title: "Admin Dashboard",
+            total_enquiries: "Total Enquiries",
+            recent_activity: "Recent Activity",
+        }
+    },
+    ta: {
+        common: {
+            login: "உள்நுழைக",
+            logout: "வெளியேறு",
+            username: "பயனர் பெயர்",
+            password: "கடவுச்சொல்",
+            search: "தேடல்",
+            save: "சேமி",
+            cancel: "ரத்து செய்",
+            delete: "அழி",
+            confirm: "உறுதிப்படுத்து",
+            actions: "செயல்கள்",
+            loading: "ஏற்றப்படுகிறது...",
+            settings: "அமைப்புகள்",
+            language: "மொழி",
+            theme: "தீம்",
+            light: "வெளிச்சம்",
+            dark: "இருள்",
+            english: "ஆங்கிலம்",
+            tamil: "தமிழ்",
+        },
+        nav: {
+            dashboard: "டாஷ்போர்டு",
+            products: "தயாரிப்புகள்",
+            branches: "கிளைகள்",
+            enquiries: "விசாரணைகள்",
+            account: "கணக்கு",
+        },
+        login: {
+            title: "ஓம் சுபா ஏஜென்சிஸ்",
+            subtitle: "உங்கள் டாஷ்போர்டை அணுக உள்நுழையவும்",
+            error: "தவறான பயனர் பெயர் அல்லது கடவுச்சொல்",
+        },
+        admin: {
+            dashboard_title: "நிர்வாகி டாஷ்போர்டு",
+            total_enquiries: "மொத்த விசாரணைகள்",
+            recent_activity: "சமீபத்திய செயல்பாடு",
+        }
+    }
+};
