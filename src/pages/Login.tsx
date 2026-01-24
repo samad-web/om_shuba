@@ -24,7 +24,7 @@ const Login: React.FC = () => {
             const userStr = localStorage.getItem('tc_users');
             const users = userStr ? JSON.parse(userStr) : [];
             const u = users.find((u: any) => u.username === username);
-            if (u.role === 'admin') navigate('/admin');
+            if (u.role === 'admin') navigate('/owner');
             else navigate('/telecaller');
         } else {
             setError('Invalid credentials');

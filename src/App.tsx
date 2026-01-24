@@ -1,10 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Login from './pages/Login';
-import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
+import OwnerDashboard from './pages/admin/OwnerDashboard';
 import TelecallerDashboard from './pages/telecaller/TelecallerDashboard';
 
 // Placeholders for now
@@ -17,8 +17,11 @@ function App() {
           <Route path="/login" element={<Login />} />
 
           <Route element={<ProtectedRoute />}>
-            {/* Routes wrapped in Layout */}
-            <Route element={<Layout />}>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/owner" element={<ProtectedRoute allowedRoles={['admin']} />}>
+                <Route index element={<OwnerDashboard />} />
+              </Route>
+
               <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']} />}>
                 <Route index element={<AdminDashboard />} />
               </Route>

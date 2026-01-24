@@ -3,7 +3,11 @@ import type { Enquiry, PipelineStage, Branch } from '../../types';
 import { storage } from '../../services/storage';
 import { useAuth } from '../../context/AuthContext';
 
-const EnquiryLog: React.FC = () => {
+interface EnquiryLogProps {
+    role?: 'telecaller' | 'admin' | 'branch_admin';
+}
+
+const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
     const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
     const { user } = useAuth();
 
@@ -23,11 +27,29 @@ const EnquiryLog: React.FC = () => {
 
     const handleStageChange = (id: string, newStage: PipelineStage) => {
         if (!user) return;
-        storage.updateEnquiryStage(id, newStage, user.id);
+
+        let amount: number | undefined = undefined;
+        if (newStage === 'Closed-Converted') {
+            const input = window.prompt("Enter Final Sale Amount (₹):");
+            if (input === null) return; // User cancelled
+            amount = parseFloat(input) || 0;
+        }
+
+        storage.updateEnquiryStage(id, newStage, user.id, undefined, amount);
         loadData(); // Reload to see changes
     };
 
+    const handleDelete = (id: string, name: string) => {
+        if (window.confirm(`Are you sure you want to delete the lead for "${name}"? This action cannot be undone.`)) {
+            storage.deleteEnquiry(id);
+            loadData();
+        }
+    };
+
     const filteredEnquiries = enquiries.filter(e => {
+        // Telecaller can only see their own enquiries in this view
+        if (role === 'telecaller' && e.createdBy !== user?.id) return false;
+
         // Branch admin can only see their branch's enquiries
         if (user?.role === 'branch_admin' && user.branchId && e.branchId !== user.branchId) {
             return false;
@@ -48,7 +70,11 @@ const EnquiryLog: React.FC = () => {
                     <option value="Qualified">Qualified</option>
                     <option value="Forwarded">Forwarded</option>
                     <option value="Contacted">Contacted</option>
+                    <option value="Demo Scheduled">Demo Scheduled</option>
+                    <option value="Visit Scheduled">Visit Scheduled</option>
                     <option value="Demo/Visit Done">Demo/Visit Done</option>
+                    <option value="Delivery Scheduled">Delivery Scheduled</option>
+                    <option value="Delivered">Delivered</option>
                     <option value="Closed-Converted">Closed-Converted</option>
                     <option value="Closed-Not Interested">Closed-Not Interested</option>
                 </select>
@@ -61,54 +87,94 @@ const EnquiryLog: React.FC = () => {
                 <button className="btn" onClick={loadData}>Refresh</button>
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead>
-                    <tr style={{ textAlign: 'left', background: '#f1f5f9' }}>
-                        <th style={{ padding: '0.5rem' }}>Date</th>
-                        <th style={{ padding: '0.5rem' }}>Customer</th>
-                        <th style={{ padding: '0.5rem' }}>Product</th>
-                        <th style={{ padding: '0.5rem' }}>Branch</th>
-                        <th style={{ padding: '0.5rem' }}>Stage</th>
-                        <th style={{ padding: '0.5rem' }}>Intent</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filteredEnquiries.map(e => (
-                        <tr key={e.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                            <td style={{ padding: '0.5rem' }}>{new Date(e.createdAt).toLocaleDateString()} {new Date(e.createdAt).toLocaleTimeString()}</td>
-                            <td style={{ padding: '0.5rem' }}>
-                                <div>{e.customerName}</div>
-                                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{e.phoneNumber}</div>
-                            </td>
-                            <td style={{ padding: '0.5rem' }}>
-                                {storage.getProducts().find(p => p.id === e.productId)?.name || e.productId}
-                            </td>
-                            <td style={{ padding: '0.5rem' }}>
-                                {branches.find(b => b.id === e.branchId)?.name || 'N/A'}
-                            </td>
-                            <td style={{ padding: '0.5rem' }}>
-                                <select
-                                    value={e.pipelineStage}
-                                    onChange={(ev) => handleStageChange(e.id, ev.target.value as PipelineStage)}
-                                    style={{ padding: '0.25rem', borderRadius: '4px', border: '1px solid var(--border)' }}
-                                >
-                                    <option value="New">New</option>
-                                    <option value="Qualified">Qualified</option>
-                                    <option value="Forwarded">Forwarded</option>
-                                    <option value="Contacted">Contacted</option>
-                                    <option value="Demo/Visit Done">Demo/Visit Done</option>
-                                    <option value="Closed-Converted">Closed-Converted</option>
-                                    <option value="Closed-Not Interested">Closed-Not Interested</option>
-                                </select>
-                            </td>
-                            <td style={{ padding: '0.5rem' }}>{e.purchaseIntent}</td>
+            <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                    <thead>
+                        <tr style={{ textAlign: 'left', background: '#f1f5f9' }}>
+                            <th style={{ padding: '0.75rem' }}>Date</th>
+                            <th style={{ padding: '0.75rem' }}>Customer</th>
+                            <th style={{ padding: '0.75rem' }}>Product</th>
+                            <th style={{ padding: '0.75rem' }}>Branch</th>
+                            <th style={{ padding: '0.75rem' }}>Stage</th>
+                            <th style={{ padding: '0.75rem' }}>Intent</th>
+                            <th style={{ padding: '0.75rem', textAlign: 'center' }}>Actions</th>
                         </tr>
-                    ))}
-                    {filteredEnquiries.length === 0 && (
-                        <tr><td colSpan={6} style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>No enquiries found</td></tr>
-                    )}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {filteredEnquiries.map(e => (
+                            <tr key={e.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                <td style={{ padding: '0.75rem' }}>
+                                    <div>{new Date(e.createdAt).toLocaleDateString()}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(e.createdAt).toLocaleTimeString()}</div>
+                                </td>
+                                <td style={{ padding: '0.75rem' }}>
+                                    <div style={{ fontWeight: 600 }}>{e.customerName}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{e.phoneNumber}</div>
+                                </td>
+                                <td style={{ padding: '0.75rem' }}>
+                                    {storage.getProducts().find(p => p.id === e.productId)?.name || e.productId}
+                                </td>
+                                <td style={{ padding: '0.75rem' }}>
+                                    {branches.find(b => b.id === e.branchId)?.name || 'N/A'}
+                                </td>
+                                <td style={{ padding: '0.75rem' }}>
+                                    <select
+                                        value={e.pipelineStage}
+                                        onChange={(ev) => handleStageChange(e.id, ev.target.value as PipelineStage)}
+                                        style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', fontSize: '0.85rem' }}
+                                    >
+                                        <option value="New">New</option>
+                                        <option value="Qualified">Qualified</option>
+                                        <option value="Forwarded">Forwarded</option>
+                                        <option value="Contacted">Contacted</option>
+                                        <option value="Demo Scheduled">Demo Scheduled</option>
+                                        <option value="Visit Scheduled">Visit Scheduled</option>
+                                        <option value="Demo/Visit Done">Demo/Visit Done</option>
+                                        <option value="Delivery Scheduled">Delivery Scheduled</option>
+                                        <option value="Delivered">Delivered</option>
+                                        <option value="Closed-Converted">Closed-Converted</option>
+                                        <option value="Closed-Not Interested">Closed-Not Interested</option>
+                                    </select>
+                                    {e.tracking && e.tracking.status === 'Scheduled' && (
+                                        <div style={{ fontSize: '0.75rem', marginTop: '0.4rem', color: '#ea580c', fontWeight: 500 }}>
+                                            📅 {e.tracking.type}: {new Date(e.tracking.scheduledDate).toLocaleString()}
+                                        </div>
+                                    )}
+                                </td>
+                                <td style={{ padding: '0.75rem' }}>
+                                    <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: '#f1f5f9' }}>{e.purchaseIntent}</span>
+                                </td>
+                                <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                                    <button
+                                        onClick={() => handleDelete(e.id, e.customerName)}
+                                        style={{
+                                            padding: '0.4rem',
+                                            borderRadius: '8px',
+                                            border: '1px solid #fee2e2',
+                                            background: '#fef2f2',
+                                            color: '#dc2626',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            margin: '0 auto',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        title="Delete Lead"
+                                        onMouseOver={(e) => e.currentTarget.style.background = '#fee2e2'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = '#fef2f2'}
+                                    >
+                                        🗑️
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        {filteredEnquiries.length === 0 && (
+                            <tr><td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No enquiries found</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 };

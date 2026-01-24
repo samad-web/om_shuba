@@ -295,3 +295,70 @@ const parseBoolean = (value: any): boolean => {
     const str = value.toString().trim().toUpperCase();
     return !['FALSE', 'NO', '0', 'INACTIVE', 'DISABLED', 'N'].includes(str);
 };
+
+/**
+ * Generate a comprehensive business report for the Owner
+ */
+export const downloadBusinessReport = (enquiries: any[], products: Product[], branches: any[]) => {
+    const wb = XLSX.utils.book_new();
+
+    // 1. Enquiry History Sheet
+    const enquiryData = enquiries.map(e => {
+        const product = products.find(p => p.id === e.productId);
+        const branch = branches.find(b => b.id === e.branchId);
+        return {
+            'Date': new Date(e.createdAt).toLocaleDateString(),
+            'Customer Name': e.customerName,
+            'Phone Number': e.phoneNumber,
+            'Product': product?.name || 'Unknown',
+            'Category': product?.category || 'Unknown',
+            'Branch': branch?.name || 'Unknown',
+            'Status': e.pipelineStage,
+            'Telecaller ID': e.telecallerId,
+            'Next Action': e.tracking?.status || 'N/A',
+            'Estimated Value': product?.priceRange || 'N/A'
+        };
+    });
+    const wsEnquiries = XLSX.utils.json_to_sheet(enquiryData);
+    XLSX.utils.book_append_sheet(wb, wsEnquiries, 'Enquiry History');
+
+    // 2. Product Sales Summary
+    const salesMap: Record<string, { count: number, revenue: string }> = {};
+    enquiries.filter(e => e.pipelineStage === 'Delivered').forEach(e => {
+        const p = products.find(prod => prod.id === e.productId);
+        if (p) {
+            if (!salesMap[p.name]) salesMap[p.name] = { count: 0, revenue: p.priceRange };
+            salesMap[p.name].count++;
+        }
+    });
+    const productSalesData = Object.entries(salesMap).map(([name, data]) => ({
+        'Product Name': name,
+        'Quantity Sold': data.count,
+        'Price Point': data.revenue
+    }));
+    const wsProducts = XLSX.utils.json_to_sheet(productSalesData);
+    XLSX.utils.book_append_sheet(wb, wsProducts, 'Product Performance');
+
+    // 3. Branch Performance
+    const branchMap: Record<string, { leads: number, conversions: number }> = {};
+    enquiries.forEach(e => {
+        const b = branches.find(branch => branch.id === e.branchId);
+        const bName = b?.name || 'Unknown';
+        if (!branchMap[bName]) branchMap[bName] = { leads: 0, conversions: 0 };
+        branchMap[bName].leads++;
+        if (e.pipelineStage === 'Delivered') branchMap[bName].conversions++;
+    });
+    const branchPerformanceData = Object.entries(branchMap).map(([name, data]) => ({
+        'Branch Name': name,
+        'Total Leads': data.leads,
+        'Successful Sales': data.conversions,
+        'Conversion %': `${Math.round((data.conversions / data.leads) * 100)}%`
+    }));
+    const wsBranches = XLSX.utils.json_to_sheet(branchPerformanceData);
+    XLSX.utils.book_append_sheet(wb, wsBranches, 'Branch Performance');
+
+    // Finalize
+    const filename = `OM_SHUBA_Business_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+};
+

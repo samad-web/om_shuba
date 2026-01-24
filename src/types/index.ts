@@ -33,16 +33,29 @@ export type PipelineStage =
   | 'Qualified'
   | 'Forwarded'
   | 'Contacted'
+  | 'Demo Scheduled'
+  | 'Visit Scheduled'
   | 'Demo/Visit Done'
+  | 'Delivery Scheduled'
+  | 'Delivered'
   | 'Closed-Converted'
   | 'Closed-Not Interested';
 
 export type PurchaseIntent = 'Ready to Buy' | 'Needs Demo' | 'General Enquiry';
 
+export interface TrackingDetails {
+  type: 'Demo' | 'Visit' | 'Delivery';
+  scheduledDate: string; // ISO date string
+  status: 'Scheduled' | 'Completed' | 'Cancelled' | 'Rescheduled';
+  notes?: string;
+  assignedTo?: string; // User ID of field agent/telecaller
+}
+
 export interface EnquiryHistory {
   stage: PipelineStage;
   timestamp: string; // ISO date string
   userId: string; // Who made the change
+  notes?: string;
 }
 
 export interface Enquiry {
@@ -54,7 +67,9 @@ export interface Enquiry {
   branchId: string; // Originally assigned branch
   purchaseIntent: PurchaseIntent;
   pipelineStage: PipelineStage;
+  tracking?: TrackingDetails;
   createdBy: string; // User ID
   createdAt: string; // ISO date string
+  closedAmount?: number; // Final sale value for converted leads
   history: EnquiryHistory[];
 }

@@ -1,4 +1,4 @@
-import type { User, Product, Branch, Enquiry, PipelineStage } from '../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, TrackingDetails } from '../types';
 import { MOCK_USERS, MOCK_PRODUCTS, MOCK_BRANCHES } from './mockData';
 
 const KEYS = {
@@ -78,24 +78,97 @@ export const storage = {
         localStorage.setItem(KEYS.USERS, JSON.stringify(users));
     },
 
+    updateUser: (user: User) => {
+        const users = storage.getUsers().map(u => u.id === user.id ? user : u);
+        localStorage.setItem(KEYS.USERS, JSON.stringify(users));
+    },
+
+    deleteUser: (id: string) => {
+        const users = storage.getUsers().filter(u => u.id !== id);
+        localStorage.setItem(KEYS.USERS, JSON.stringify(users));
+    },
+
+    changeUserPassword: (userId: string, newPass: string) => {
+        const users = storage.getUsers().map(u => {
+            if (u.id === userId) {
+                return { ...u, password: newPass };
+            }
+            return u;
+        });
+        localStorage.setItem(KEYS.USERS, JSON.stringify(users));
+    },
+
     addEnquiry: (enquiry: Enquiry) => {
         const list = storage.getEnquiries();
         list.push(enquiry);
         localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(list));
     },
-    updateEnquiryStage: (id: string, stage: PipelineStage, userId: string) => {
+    updateEnquiryStage: (id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number) => {
         const list = storage.getEnquiries().map(e => {
             if (e.id === id) {
                 return {
                     ...e,
                     pipelineStage: stage,
-                    history: [...e.history, { stage, timestamp: new Date().toISOString(), userId }]
+                    closedAmount: amount !== undefined ? amount : e.closedAmount,
+                    history: [...e.history, { stage, timestamp: new Date().toISOString(), userId, notes }]
                 };
             }
             return e;
         });
         localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(list));
     },
+
+    updateEnquiryAmount: (id: string, amount: number) => {
+        const list = storage.getEnquiries().map(e => {
+            if (e.id === id) {
+                return { ...e, closedAmount: amount };
+            }
+            return e;
+        });
+        localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(list));
+    },
+
+
+    updateEnquiryTracking: (id: string, tracking: TrackingDetails, userId: string) => {
+        const list = storage.getEnquiries().map(e => {
+            if (e.id === id) {
+                const newStageMap: Record<string, PipelineStage> = {
+                    'Demo': 'Demo Scheduled',
+                    'Visit': 'Visit Scheduled',
+                    'Delivery': 'Delivery Scheduled'
+                };
+
+                // Auto-update stage based on tracking type if it's a new scheduling
+                const newStage = (tracking.status === 'Scheduled' && newStageMap[tracking.type])
+                    ? newStageMap[tracking.type]
+                    : (tracking.status === 'Completed' && tracking.type === 'Delivery')
+                        ? 'Delivered'
+                        : (tracking.status === 'Completed')
+                            ? 'Demo/Visit Done'
+                            : e.pipelineStage;
+
+                return {
+                    ...e,
+                    pipelineStage: newStage,
+                    tracking,
+                    history: [...e.history, {
+                        stage: newStage,
+                        timestamp: new Date().toISOString(),
+                        userId,
+                        notes: `Tracking Update: ${tracking.type} - ${tracking.status} (${tracking.scheduledDate})`
+                    }]
+                };
+            }
+            return e;
+        });
+        localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(list));
+    },
+
+    deleteEnquiry: (id: string) => {
+        const list = storage.getEnquiries().filter(e => e.id !== id);
+        localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(list));
+    },
+
 
     // Basic Auth Check
     login: (username: string, password: string): User | undefined => {

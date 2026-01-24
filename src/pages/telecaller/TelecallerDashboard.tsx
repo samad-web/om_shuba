@@ -1,14 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Product, Branch, PipelineStage, Enquiry } from '../../types';
+import type { Product, Branch, Enquiry } from '../../types';
 import { storage } from '../../services/storage';
 import { useAuth } from '../../context/AuthContext';
 import ProductSearch from '../../components/ProductSearch';
 
+import Sidebar from '../../components/dashboard/Sidebar';
+import StatCard from '../../components/dashboard/StatCard';
+import EnquiryLog from '../admin/EnquiryLog';
+import ConversionOverview from '../admin/ConversionOverview';
+
 const TelecallerDashboard: React.FC = () => {
     const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState('dashboard');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [myEnquiries, setMyEnquiries] = useState<Enquiry[]>([]);
+    const [metrics, setMetrics] = useState({ capturedToday: 0, qualifiedRate: 0, scheduledDemos: 0 });
 
     // Form State
     const [customerName, setCustomerName] = useState('');
@@ -18,7 +25,6 @@ const TelecallerDashboard: React.FC = () => {
     const [intent, setIntent] = useState('General Enquiry');
     const [successMsg, setSuccessMsg] = useState('');
 
-    // Refs for focus management
     const nameInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -28,19 +34,24 @@ const TelecallerDashboard: React.FC = () => {
 
     const loadMyEnquiries = () => {
         if (!user) return;
-        // Filter enquiries created by this user AND/OR assigned to them?
-        // Requirement: "Log telecaller who created enquiry"
-        // "Pipeline Action (Telecaller): Can only move New -> Qualified"
-        // So show enquiries this user created that are still in early stages?
-        // Let's show all created by user for now.
         const all = storage.getEnquiries();
         const mine = all.filter(e => e.createdBy === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setMyEnquiries(mine);
+
+        const today = new Date().toISOString().split('T')[0];
+        const todayLeads = mine.filter(e => e.createdAt.startsWith(today)).length;
+        const qualified = mine.filter(e => e.pipelineStage !== 'New').length;
+        const demos = mine.filter(e => e.pipelineStage.includes('Demo')).length;
+
+        setMetrics({
+            capturedToday: todayLeads,
+            qualifiedRate: Math.round((qualified / (mine.length || 1)) * 100),
+            scheduledDemos: demos
+        });
     };
 
     const handleProductSelect = (product: Product) => {
         setSelectedProduct(product);
-        // Auto-focus next field
         setTimeout(() => nameInputRef.current?.focus(), 0);
     };
 
@@ -48,30 +59,15 @@ const TelecallerDashboard: React.FC = () => {
         e.preventDefault();
         if (!selectedProduct || !user) return;
 
-        // Validate Phone (Basic)
-        if (phone.length < 10) {
-            alert("Invalid Phone Number");
-            return;
-        }
-
-        // Check Duplicates? (Requirement: "validate & prevent duplicates")
-        // Simple check: same phone + same product within last 30 days? Or just same phone?
-        // "Phone Number (validate & prevent duplicates)" usually means unique customer per product or global?
-        // Let's assume global unique phone check for now to keep it strict, or maybe warn.
-        // Spec says: "Prevent duplicates".
+        if (phone.length < 10) { alert("Invalid Phone Number"); return; }
         const existing = storage.getEnquiries().find(e => e.phoneNumber === phone && e.productId === selectedProduct.id && e.pipelineStage !== 'Closed-Not Interested');
-        if (existing) {
-            alert(`Duplicate Enquiry! This phone number already has an active enquiry for ${selectedProduct.name}.`);
-            return;
-        }
+        if (existing) { alert(`Duplicate Enquiry! Phone already has an active lead for ${selectedProduct.name}.`); return; }
 
         const newEnquiry: Enquiry = {
             id: 'e' + Date.now(),
-            customerName,
-            phoneNumber: phone,
-            location,
+            customerName, phoneNumber: phone, location,
             productId: selectedProduct.id,
-            branchId: branchId || branches[0]?.id || '', // Default to first branch if none selected
+            branchId: branchId || branches[0]?.id || '',
             purchaseIntent: intent as any,
             pipelineStage: 'New',
             createdBy: user.id,
@@ -80,159 +76,136 @@ const TelecallerDashboard: React.FC = () => {
         };
 
         storage.addEnquiry(newEnquiry);
-
-        // Reset
-        setCustomerName('');
-        setPhone('');
-        setLocation('');
-        setBranchId('');
-        setIntent('General Enquiry');
-        setSelectedProduct(null);
-        setSuccessMsg('Enquiry Saved Successfully!');
+        setCustomerName(''); setPhone(''); setLocation(''); setBranchId(''); setSelectedProduct(null);
+        setSuccessMsg('Lead Captured Successfully! ✨');
         loadMyEnquiries();
-
-        // Clear success msg after 3s
         setTimeout(() => setSuccessMsg(''), 3000);
     };
 
-    const updateStage = (enquiryId: string, newStage: PipelineStage) => {
-        if (!user) return;
-        storage.updateEnquiryStage(enquiryId, newStage, user.id);
-        loadMyEnquiries();
+    const renderDashboard = () => (
+        <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <div>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem' }}>Welcome, {user?.name}</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Track your captures and lead performance today.</p>
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
+                <StatCard title="Leads Captured (Today)" value={metrics.capturedToday.toString()} trend="+2 vs yesterday" trendType="up" sparklineData={[5, 8, 4, 12, 10, 15, metrics.capturedToday]} />
+                <StatCard title="Qualification Rate" value={`${metrics.qualifiedRate}%`} trend="Top Performers" trendType="up" sparklineData={[40, 45, 38, 52, 50, 60, metrics.qualifiedRate]} />
+                <StatCard title="Demos Scheduled" value={metrics.scheduledDemos.toString()} trend="Active Pipeline" trendType="up" sparklineData={[2, 4, 3, 6, 5, 8, metrics.scheduledDemos]} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '2rem' }}>
+                {/* Capture Section */}
+                <div className="card" style={{ padding: '2rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1.5rem' }}>🎯</span> Quick Lead Capture
+                    </h3>
+
+                    <div style={{ marginBottom: '2rem' }}>
+                        <ProductSearch onSelect={handleProductSelect} />
+                    </div>
+
+                    <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', opacity: selectedProduct ? 1 : 0.4, pointerEvents: selectedProduct ? 'auto' : 'none', transition: 'all 0.3s' }}>
+                        {selectedProduct && (
+                            <div style={{ padding: '1rem', background: 'rgba(22, 163, 74, 0.05)', border: '1px solid #bbf7d0', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--primary-dark)', fontWeight: 700, textTransform: 'uppercase' }}>Selected Equipment</div>
+                                    <div style={{ fontWeight: 700 }}>{selectedProduct.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({selectedProduct.sku})</span></div>
+                                </div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>{selectedProduct.priceRange}</div>
+                            </div>
+                        )}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Customer Name *</label>
+                                <input ref={nameInputRef} className="input" required value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Full legal name" />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Phone Number *</label>
+                                <input className="input" required type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="10-digit mobile" />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Location *</label>
+                                <input className="input" required value={location} onChange={e => setLocation(e.target.value)} placeholder="City / District" />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Preferred Branch</label>
+                                <select className="input" value={branchId} onChange={e => setBranchId(e.target.value)} required>
+                                    <option value="">Choose nearest branch</option>
+                                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem' }}>Interested Stage</label>
+                            <div style={{ display: 'flex', gap: '1.5rem' }}>
+                                {['Ready to Buy', 'Needs Demo', 'General Enquiry'].map(i => (
+                                    <label key={i} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                                        <input type="radio" name="intent" value={i} checked={intent === i} onChange={e => setIntent(e.target.value)} style={{ width: '18px', height: '18px' }} />
+                                        {i}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button type="submit" className="btn btn-primary" style={{ padding: '1rem', borderRadius: '12px', fontSize: '1rem', fontWeight: 700, marginTop: '1rem', boxShadow: '0 4px 12px rgba(22, 163, 74, 0.2)' }}>
+                            CAPTURE LEAD ✨
+                        </button>
+                        {successMsg && <div style={{ color: 'var(--success)', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', animation: 'fadeIn 0.5s' }}>{successMsg}</div>}
+                    </form>
+                </div>
+
+                {/* Recent List */}
+                <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h4 style={{ fontWeight: 700 }}>Your Recent Captures</h4>
+                        <button className="btn" style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }} onClick={() => setActiveTab('enquiries')}>View All</button>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {myEnquiries.slice(0, 5).map(e => (
+                            <div key={e.id} style={{ padding: '1rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{e.customerName}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{storage.getProducts().find(p => p.id === e.productId)?.name}</div>
+                                </div>
+                                <div style={{
+                                    padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700,
+                                    background: e.pipelineStage === 'New' ? '#dcfce7' : '#e0f2fe',
+                                    color: e.pipelineStage === 'New' ? '#15803d' : '#0369a1'
+                                }}>
+                                    {e.pipelineStage}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'enquiries': return <div className="card" style={{ height: 'auto' }}><EnquiryLog role="telecaller" /></div>;
+            case 'conversions': return <ConversionOverview />;
+            case 'dashboard':
+            default: return renderDashboard();
+        }
     };
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', height: 'calc(100vh - 100px)' }}>
-            {/* Left Column: Capture */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-                <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>New Enquiry Capture</h2>
-
-                <ProductSearch onSelect={handleProductSelect} />
-
-                <form onSubmit={handleSave} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', opacity: selectedProduct ? 1 : 0.5, pointerEvents: selectedProduct ? 'auto' : 'none' }}>
-                    <div style={{ padding: '0.5rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '4px' }}>
-                        <strong>Selected Product:</strong> {selectedProduct?.name} <span style={{ color: '#059669', fontWeight: 600 }}>[{selectedProduct?.sku}]</span> <span style={{ color: 'var(--success)' }}>{selectedProduct?.priceRange}</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.9rem' }}>Customer Name *</label>
-                            <input
-                                ref={nameInputRef}
-                                className="input"
-                                required
-                                value={customerName}
-                                onChange={e => setCustomerName(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.9rem' }}>Phone Number *</label>
-                            <input
-                                className="input"
-                                required
-                                type="tel"
-                                value={phone}
-                                onChange={e => setPhone(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.9rem' }}>Location *</label>
-                            <input className="input" required value={location} onChange={e => setLocation(e.target.value)} />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.9rem' }}>Branch Assignment</label>
-                            <select className="input" value={branchId} onChange={e => setBranchId(e.target.value)} required>
-                                <option value="">Select Branch</option>
-                                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label style={{ display: 'block', fontSize: '0.9rem' }}>Purchase Intent</label>
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                            {['Ready to Buy', 'Needs Demo', 'General Enquiry'].map(i => (
-                                <label key={i} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                                    <input
-                                        type="radio"
-                                        name="intent"
-                                        value={i}
-                                        checked={intent === i}
-                                        onChange={e => setIntent(e.target.value)}
-                                        style={{ marginRight: '0.25rem' }}
-                                    />
-                                    {i}
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div style={{ marginTop: 'auto' }}>
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.75rem' }}>
-                            SAVE ENQUIRY
-                        </button>
-                    </div>
-
-                    {successMsg && <div style={{ color: 'var(--success)', textAlign: 'center', fontWeight: 'bold' }}>{successMsg}</div>}
-                </form>
-            </div>
-
-            {/* Right Column: My Active Enquiries */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <h3 style={{ marginBottom: '1rem' }}>My Recent Enquiries</h3>
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                        <thead style={{ position: 'sticky', top: 0, background: 'white' }}>
-                            <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
-                                <th style={{ padding: '0.5rem' }}>Name/Phone</th>
-                                <th style={{ padding: '0.5rem' }}>Product</th>
-                                <th style={{ padding: '0.5rem' }}>Stage</th>
-                                <th style={{ padding: '0.5rem' }}>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {myEnquiries.map(e => (
-                                <tr key={e.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: '0.5rem' }}>
-                                        <div style={{ fontWeight: 500 }}>{e.customerName}</div>
-                                        <div style={{ color: 'var(--text-muted)' }}>{e.phoneNumber}</div>
-                                    </td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                        {storage.getProducts().find(p => p.id === e.productId)?.name}
-                                    </td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                        <span style={{
-                                            padding: '0.2rem 0.5rem', borderRadius: '4px',
-                                            background: e.pipelineStage === 'New' ? '#dbeafe' : '#f1f5f9',
-                                            color: e.pipelineStage === 'New' ? '#1e40af' : '#475569'
-                                        }}>
-                                            {e.pipelineStage}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                        {e.pipelineStage === 'New' && (
-                                            <button
-                                                className="btn"
-                                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}
-                                                onClick={() => updateStage(e.id, 'Qualified')}
-                                            >
-                                                Mark Qualified
-                                            </button>
-                                        )}
-                                        {e.pipelineStage === 'Qualified' && (
-                                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Auto-Forwarded</span>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                            {myEnquiries.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', padding: '1rem' }}>No enquiries yet.</td></tr>}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div style={{ display: 'flex', background: '#f8fafc', height: '100vh', overflow: 'hidden' }}>
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+            <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
+                {renderContent()}
+            </main>
         </div>
     );
 };

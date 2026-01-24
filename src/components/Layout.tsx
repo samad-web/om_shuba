@@ -13,22 +13,36 @@ const Layout: React.FC = () => {
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <header style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', padding: '0.75rem 1rem' }}>
-                <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 0 }}>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--primary)' }}>
-                        TeleConnect
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                            {user?.name} ({user?.role})
+            <header className="glass-header">
+                <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--primary-light))', borderRadius: '8px' }}></div>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary-dark)' }}>
+                            OM SHUBA
                         </span>
-                        <button onClick={handleLogout} className="btn" style={{ border: '1px solid var(--border)', fontSize: '0.85rem' }}>
-                            Logout
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.1' }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)' }}>{user?.name}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role?.replace('_', ' ')}</span>
+                        </div>
+                        <button
+                            onClick={handleLogout}
+                            className="btn"
+                            style={{
+                                background: 'white',
+                                border: '1px solid var(--border)',
+                                fontSize: '0.85rem',
+                                padding: '0.5rem 1rem',
+                                color: 'var(--text-muted)'
+                            }}
+                        >
+                            Log Out
                         </button>
                     </div>
                 </div>
             </header>
-            <main className="container" style={{ flex: 1, padding: '2rem 1rem', width: '100%' }}>
+            <main className="container" style={{ flex: 1, padding: '2rem 1.5rem', width: '100%' }}>
                 <Outlet />
             </main>
         </div>

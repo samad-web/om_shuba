@@ -2,8 +2,8 @@ import type { User, Product, Branch } from '../types';
 
 export const MOCK_USERS: User[] = [
     { id: 'u1', username: 'admin', password: 'password', role: 'admin', name: 'System Admin' },
-    { id: 'u2', username: 'caller1', password: 'password', role: 'telecaller', name: 'Alice (Caller)' },
-    { id: 'u3', username: 'caller2', password: 'password', role: 'telecaller', name: 'Bob (Caller)' },
+    { id: 'u2', username: 'caller1', password: 'password', role: 'telecaller', name: 'Meena (Caller)' },
+    { id: 'u3', username: 'caller2', password: 'password', role: 'telecaller', name: 'Rajesh (Caller)' },
 
     // Branch Admins
     { id: 'u4', username: 'admin_attrupalam', password: 'password', role: 'branch_admin', name: 'Attrupalam Admin', branchId: 'b1' },
