@@ -72,7 +72,7 @@ const UserManagement: React.FC = () => {
         setIsAdding(true);
     };
 
-    const deleteUser = async (id: string, name: string) => {
+    const handleDelete = async (id: string, name: string) => {
         const confirmed = await confirm({
             title: 'Delete User',
             message: `Delete staff account for "${name}"? This cannot be undone.`,
@@ -83,7 +83,7 @@ const UserManagement: React.FC = () => {
 
         if (confirmed) {
             storage.deleteUser(id);
-            loadUsers();
+            loadData();
             showToast('User deleted successfully', 'success');
         }
     };

@@ -28,7 +28,6 @@ const TelecallerDashboard: React.FC = () => {
     const [location, setLocation] = useState('');
     const [branchId, setBranchId] = useState('');
     const [intent, setIntent] = useState('General Enquiry');
-    const [successMsg, setSuccessMsg] = useState('');
 
     const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,7 +171,6 @@ const TelecallerDashboard: React.FC = () => {
                         <button type="submit" className="btn btn-primary" style={{ padding: '1rem', borderRadius: '12px', fontSize: '1rem', fontWeight: 700, marginTop: '1rem', boxShadow: '0 4px 12px rgba(22, 163, 74, 0.2)' }}>
                             {t('enquiries.captureLead')} ✨
                         </button>
-                        {successMsg && <div style={{ color: 'var(--success)', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', animation: 'fadeIn 0.5s' }}>{successMsg}</div>}
                     </form>
                 </div>
 

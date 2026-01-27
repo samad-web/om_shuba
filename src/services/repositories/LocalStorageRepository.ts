@@ -1,4 +1,4 @@
-import type { User, Product, Branch, Enquiry, PipelineStage } from '../../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, Promotion } from '../../types';
 import type { IDataRepository } from '../interfaces/IDataRepository';
 import { MOCK_USERS, MOCK_PRODUCTS, MOCK_BRANCHES } from '../mockData';
 
