@@ -60,7 +60,7 @@ const Login: React.FC = () => {
                     </button>
                 </form>
                 <div style={{ marginTop: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                    Use <b>admin/password</b> or <b>caller1/password</b>
+                    
                 </div>
             </div>
         </div>

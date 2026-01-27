@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -8,9 +9,15 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const { t } = useSettings();
+    const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     const getNavItems = () => {
         if (user?.role === 'admin') { // This is our "Owner" role in mock data
@@ -110,9 +117,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     boxShadow: '4px 0 10px rgba(0,0,0,0.1)',
                     zIndex: 1000,
                     flexShrink: 0,
-                    position: 'fixed',
-                    left: 0,
-                    top: 0,
                     transition: 'transform 0.3s ease'
                 }}
                 className={`sidebar ${isMobileMenuOpen ? 'sidebar-open' : ''}`}
@@ -187,6 +191,36 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                         </button>
                     ))}
                 </nav>
+
+                {/* Sign Out Button */}
+                <button
+                    onClick={handleLogout}
+                    style={{
+                        width: '100%',
+                        padding: '1rem 1.25rem',
+                        background: 'rgba(220, 38, 38, 0.15)',
+                        border: '1px solid rgba(220, 38, 38, 0.3)',
+                        borderRadius: '12px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        transition: 'all 0.2s',
+                        marginTop: '1rem'
+                    }}
+                    onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)';
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'rgba(220, 38, 38, 0.15)';
+                    }}
+                >
+                    <span style={{ fontSize: '1.25rem' }}>🚪</span>
+                    <span>{t('common.logout')}</span>
+                </button>
             </div>
 
             {/* Responsive Styles */}
@@ -200,6 +234,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     }
                     .sidebar {
                         transform: translateX(-100%);
+                        position: fixed;
+                        left: 0;
+                        top: 0;
                     }
                     .sidebar-open {
                         transform: translateX(0);
