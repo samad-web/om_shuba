@@ -7,6 +7,7 @@ const KEYS = {
     PRODUCTS: 'tc_products',
     BRANCHES: 'tc_branches',
     ENQUIRIES: 'tc_enquiries',
+    PROMOTIONS: 'tc_promotions',
 };
 
 /**
@@ -36,6 +37,28 @@ export class LocalStorageRepository implements IDataRepository {
         // Initialize enquiries
         if (!localStorage.getItem(KEYS.ENQUIRIES)) {
             localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify([]));
+        }
+
+        // Initialize promotions
+        if (!localStorage.getItem(KEYS.PROMOTIONS)) {
+            const initialPromotions: Promotion[] = [
+                {
+                    id: '1',
+                    title: 'Republic Day Special!',
+                    description: 'Get 10% off on all Weeders and Rotavators this week.',
+                    validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                    active: true,
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: '2',
+                    title: 'New Launch: Milking Machine X1',
+                    description: 'Special introductory price of ₹45,000 only.',
+                    active: true,
+                    createdAt: new Date().toISOString()
+                }
+            ];
+            localStorage.setItem(KEYS.PROMOTIONS, JSON.stringify(initialPromotions));
         }
     }
 
@@ -154,5 +177,28 @@ export class LocalStorageRepository implements IDataRepository {
             return e;
         });
         localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(updated));
+    }
+
+    // Promotion Operations
+    async getPromotions(): Promise<Promotion[]> {
+        return JSON.parse(localStorage.getItem(KEYS.PROMOTIONS) || '[]');
+    }
+
+    async addPromotion(promotion: Promotion): Promise<void> {
+        const promotions = await this.getPromotions();
+        promotions.push(promotion);
+        localStorage.setItem(KEYS.PROMOTIONS, JSON.stringify(promotions));
+    }
+
+    async updatePromotion(promotion: Promotion): Promise<void> {
+        const promotions = await this.getPromotions();
+        const updated = promotions.map(p => p.id === promotion.id ? promotion : p);
+        localStorage.setItem(KEYS.PROMOTIONS, JSON.stringify(updated));
+    }
+
+    async deletePromotion(id: string): Promise<void> {
+        const promotions = await this.getPromotions();
+        const filtered = promotions.filter(p => p.id !== id);
+        localStorage.setItem(KEYS.PROMOTIONS, JSON.stringify(filtered));
     }
 }

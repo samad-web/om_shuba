@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import type { Branch } from '../../types';
 import { storage } from '../../services/storage';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
 
 const BranchMaster: React.FC = () => {
     const { user } = useAuth();
+    const { confirm } = useConfirm();
+    const { showToast } = useToast();
     const [branches, setBranches] = useState<Branch[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
@@ -44,6 +48,7 @@ const BranchMaster: React.FC = () => {
             const all = storage.getBranches();
             const updated = all.map(b => b.id === editingBranch.id ? { ...editingBranch, ...formData } as Branch : b);
             localStorage.setItem('tc_branches', JSON.stringify(updated));
+            showToast('Branch updated successfully', 'success');
         } else {
             // Add new branch
             const newBranchId = 'b' + Date.now();
@@ -62,7 +67,7 @@ const BranchMaster: React.FC = () => {
             };
             storage.addUser(newBranchAdmin);
 
-            alert(`Branch created successfully!\n\nBranch Admin Account:\nUsername: ${newBranchAdmin.username}\nPassword: password\n\nPlease save these credentials.`);
+            showToast(`Branch created! Username: ${newBranchAdmin.username}, Password: password`, 'success');
         }
         setIsModalOpen(false);
         loadBranches();
@@ -73,12 +78,22 @@ const BranchMaster: React.FC = () => {
         const updated = all.map(b => b.id === branch.id ? { ...b, active: !b.active } : b);
         localStorage.setItem('tc_branches', JSON.stringify(updated));
         loadBranches();
+        showToast(`Branch ${!branch.active ? 'enabled' : 'disabled'} successfully`, 'success');
     };
 
-    const deleteBranch = (branch: Branch) => {
-        if (window.confirm(`Are you sure you want to delete "${branch.name}"? This action cannot be undone.`)) {
+    const deleteBranch = async (branch: Branch) => {
+        const confirmed = await confirm({
+            title: 'Delete Branch',
+            message: `Are you sure you want to delete "${branch.name}"? This action cannot be undone.`,
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            danger: true
+        });
+
+        if (confirmed) {
             storage.deleteBranch(branch.id);
             loadBranches();
+            showToast('Branch deleted successfully', 'success');
         }
     };
 
@@ -93,7 +108,7 @@ const BranchMaster: React.FC = () => {
 
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                    <tr style={{ textAlign: 'left', background: '#f1f5f9' }}>
+                    <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)' }}>
                         <th style={{ padding: '0.5rem' }}>Name</th>
                         <th style={{ padding: '0.5rem' }}>Location</th>
                         <th style={{ padding: '0.5rem' }}>Contact</th>

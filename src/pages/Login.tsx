@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import SettingsToggle from '../components/SettingsToggle';
 import { useSettings } from '../context/SettingsContext';
 
 const Login: React.FC = () => {
@@ -21,6 +20,7 @@ const Login: React.FC = () => {
             const users = userStr ? JSON.parse(userStr) : [];
             const u = users.find((u: any) => u.username === username);
             if (u.role === 'admin') navigate('/owner');
+            else if (u.role === 'branch_admin') navigate('/admin');
             else navigate('/telecaller');
         } else {
             setError(t('login.error'));
@@ -29,10 +29,6 @@ const Login: React.FC = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-app)', gap: '1rem' }}>
-            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}>
-                <SettingsToggle />
-            </div>
-
             <div className="card" style={{ width: '100%', maxWidth: '350px' }}>
                 <h2 style={{ textAlign: 'center', marginBottom: '0.25rem' }}>{t('login.title')}</h2>
                 <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{t('login.subtitle')}</p>

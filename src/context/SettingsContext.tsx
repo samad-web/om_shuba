@@ -16,16 +16,19 @@ const SettingsContext = createContext<SettingsContextType>(null!);
 import { translations } from '../i18n/translations';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [theme, setTheme] = useState<Theme>(
-        (localStorage.getItem('theme') as Theme) || 'light'
-    );
+    const [theme, setTheme] = useState<Theme>(() => {
+        // Load theme from localStorage on initialization
+        const savedTheme = localStorage.getItem('theme');
+        return (savedTheme as Theme) || 'light';
+    });
     const [language, setLanguageState] = useState<Language>(
         (localStorage.getItem('language') as Language) || 'en'
     );
 
+    // Apply theme to document and persist to localStorage
     useEffect(() => {
-        localStorage.setItem('theme', theme);
         document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
     }, [theme]);
 
     useEffect(() => {
@@ -36,6 +39,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const toggleTheme = () => {
         setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
     };
+
 
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);

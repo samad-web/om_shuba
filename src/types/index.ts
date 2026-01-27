@@ -73,3 +73,12 @@ export interface Enquiry {
   closedAmount?: number; // Final sale value for converted leads
   history: EnquiryHistory[];
 }
+
+export interface Promotion {
+  id: string;
+  title: string;
+  description: string;
+  validUntil?: string; // ISO date string
+  active: boolean;
+  createdAt: string; // ISO date string
+}

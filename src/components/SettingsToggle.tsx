@@ -9,11 +9,13 @@ const SettingsToggle: React.FC = () => {
             display: 'flex',
             gap: '0.75rem',
             alignItems: 'center',
-            padding: '0.5rem',
-            borderRadius: '20px',
-            background: 'var(--bg-card)',
+            padding: '0.6rem 0.8rem',
+            borderRadius: '24px',
+            background: 'var(--header-bg)',
+            backdropFilter: 'blur(12px)',
             border: '1px solid var(--border)',
-            boxShadow: 'var(--shadow-sm)'
+            boxShadow: 'var(--shadow-lg)',
+            transition: 'transform 0.2s ease'
         }}>
             <div className="language-switches" style={{ display: 'flex', gap: '0.25rem' }}>
                 <button

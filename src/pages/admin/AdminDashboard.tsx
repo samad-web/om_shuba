@@ -5,10 +5,10 @@ import ProductMaster from './ProductMaster';
 import BranchMaster from './BranchMaster';
 import EnquiryLog from './EnquiryLog';
 import ConversionOverview from './ConversionOverview';
+import PromotionManagement from '../../components/PromotionManagement';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../services/storage';
 import { useSettings } from '../../context/SettingsContext';
-import SettingsToggle from '../../components/SettingsToggle';
 
 const AdminDashboard: React.FC = () => {
     const { user } = useAuth();
@@ -47,15 +47,14 @@ const AdminDashboard: React.FC = () => {
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Overview of branch operations and inventory state.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <SettingsToggle />
-                    <button className="btn" onClick={calculateMetrics}>🔄 {t('common.search')}</button>
+                    <button className="btn" onClick={calculateMetrics}>🔄 {t('common.refresh')}</button>
                 </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                <StatCard title="Total Branch Leads" value={metrics.branchLeads.toString()} trend="+12% this month" trendType="up" sparklineData={[30, 45, 40, 60, 55, 75, metrics.branchLeads]} />
-                <StatCard title="Demo Conversions" value={metrics.demosDone.toString()} trend="High Volume" trendType="up" sparklineData={[10, 15, 12, 18, 20, 25, metrics.demosDone]} />
-                <StatCard title="Active Inventory" value={metrics.activeProducts.toString()} trend="Catalog Status" trendType="up" sparklineData={[15, 15, 16, 16, 17, 18, metrics.activeProducts]} />
+                <StatCard title={t('metrics.branchLeads')} value={metrics.branchLeads.toString()} trend={t('metrics.monthTrend')} trendType="up" sparklineData={[30, 45, 40, 60, 55, 75, metrics.branchLeads]} />
+                <StatCard title={t('metrics.demoConversions')} value={metrics.demosDone.toString()} trend={t('metrics.highVolume')} trendType="up" sparklineData={[10, 15, 12, 18, 20, 25, metrics.demosDone]} />
+                <StatCard title={t('metrics.activeInventory')} value={metrics.activeProducts.toString()} trend={t('metrics.catalogStatus')} trendType="up" sparklineData={[15, 15, 16, 16, 17, 18, metrics.activeProducts]} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
@@ -69,16 +68,16 @@ const AdminDashboard: React.FC = () => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div className="card" style={{ background: 'linear-gradient(135deg, #0f172a, #1e293b)', color: 'white' }}>
-                        <h4 style={{ color: '#86efac', marginBottom: '1rem' }}>Admin Tip 💡</h4>
+                        <h4 style={{ color: '#86efac', marginBottom: '1rem' }}>{t('quickActions.adminTip')}</h4>
                         <p style={{ fontSize: '0.85rem', lineHeight: 1.6, opacity: 0.9 }}>
-                            Regularly updating product inventory ensures telecallers provide accurate information to customers. Check for inactive products daily.
+                            {t('quickActions.tipText')}
                         </p>
                     </div>
                     <div className="card">
-                        <h4 style={{ fontWeight: 700, marginBottom: '1rem' }}>Quick Actions</h4>
+                        <h4 style={{ fontWeight: 700, marginBottom: '1rem' }}>{t('quickActions.title')}</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <button className="btn" style={{ textAlign: 'left', background: 'var(--bg-app)' }} onClick={() => setActiveTab('products')}>📦 Manage Products</button>
-                            <button className="btn" style={{ textAlign: 'left', background: 'var(--bg-app)' }} onClick={() => setActiveTab('branches')}>🏢 Register New Branch</button>
+                            <button className="btn" style={{ textAlign: 'left', background: 'var(--bg-app)' }} onClick={() => setActiveTab('products')}>{t('quickActions.manageProducts')}</button>
+                            <button className="btn" style={{ textAlign: 'left', background: 'var(--bg-app)' }} onClick={() => setActiveTab('branches')}>{t('quickActions.registerBranch')}</button>
                         </div>
                     </div>
                 </div>
@@ -89,9 +88,16 @@ const AdminDashboard: React.FC = () => {
     const renderContent = () => {
         switch (activeTab) {
             case 'products': return <div className="card"><ProductMaster /></div>;
-            case 'branches': return <div className="card"><BranchMaster /></div>;
+            case 'branches':
+                // Only allow owner/admin role to access branch management
+                if (user?.role === 'branch_admin') {
+                    setActiveTab('dashboard');
+                    return renderDashboard();
+                }
+                return <div className="card"><BranchMaster /></div>;
             case 'enquiries': return <div className="card"><EnquiryLog role={user?.role === 'branch_admin' ? 'branch_admin' : 'admin'} /></div>;
             case 'conversions': return <ConversionOverview />;
+            case 'promotions': return <div className="card"><PromotionManagement /></div>;
             case 'dashboard':
             default: return renderDashboard();
         }

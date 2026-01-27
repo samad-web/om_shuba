@@ -30,7 +30,7 @@ const Layout: React.FC = () => {
                             onClick={handleLogout}
                             className="btn"
                             style={{
-                                background: 'white',
+                                background: 'var(--bg-card)',
                                 border: '1px solid var(--border)',
                                 fontSize: '0.85rem',
                                 padding: '0.5rem 1rem',

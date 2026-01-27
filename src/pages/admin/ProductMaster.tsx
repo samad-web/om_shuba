@@ -151,7 +151,7 @@ const ProductMaster: React.FC = () => {
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr style={{ textAlign: 'left', background: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
+                                    <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)', borderBottom: '2px solid var(--border)' }}>
                                         <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>Name / SKU</th>
                                         <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>Description</th>
                                         <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>Price Range</th>
@@ -317,7 +317,7 @@ const ProductMaster: React.FC = () => {
 
                         <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #fee2e2', padding: '1rem', borderRadius: '12px', background: '#fffafb' }}>
                             {uploadResult.errors.map((error, i) => (
-                                <div key={i} style={{ fontSize: '0.85rem', marginBottom: '0.75rem', padding: '0.75rem', background: 'white', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+                                <div key={i} style={{ fontSize: '0.85rem', marginBottom: '0.75rem', padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid #fee2e2' }}>
                                     <strong style={{ color: '#dc2626' }}>Row {error.row}:</strong> {error.message}
                                 </div>
                             ))}

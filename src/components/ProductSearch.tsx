@@ -1,21 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Product } from '../types';
+import type { Product, Promotion } from '../types';
+import { useSettings } from '../context/SettingsContext';
 import { storage } from '../services/storage';
+import { dataService } from '../services/DataService';
 
 interface ProductSearchProps {
     onSelect: (product: Product) => void;
 }
 
 const ProductSearch: React.FC<ProductSearchProps> = ({ onSelect }) => {
+    const { t } = useSettings();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Product[]>([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [allProducts, setAllProducts] = useState<Product[]>([]);
+    const [promotions, setPromotions] = useState<Promotion[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setAllProducts(storage.getProducts().filter(p => p.active));
+        loadPromotions();
     }, []);
+
+    const loadPromotions = async () => {
+        const allPromotions = await dataService.getPromotions();
+        const activePromotions = allPromotions.filter(p => {
+            if (!p.active) return false;
+            if (p.validUntil && new Date(p.validUntil) < new Date()) return false;
+            return true;
+        });
+        setPromotions(activePromotions);
+    };
 
     useEffect(() => {
         if (!query) {
@@ -59,13 +74,46 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onSelect }) => {
     };
 
     return (
-        <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>1. Product Quick Search</label>
+        <div style={{ position: 'relative' }}>
+            {promotions.length > 0 && (
+                <div style={{
+                    marginBottom: '1rem',
+                    padding: '0.75rem 1rem',
+                    background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                    borderRadius: '8px',
+                    border: '1px solid #fbbf24',
+                    fontSize: '0.875rem'
+                }}>
+                    <div style={{ fontWeight: 700, color: '#92400e', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>🎉</span> {t('promotions.activePromotions')}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {promotions.map(promo => (
+                            <div key={promo.id} style={{
+                                background: 'rgba(255, 255, 255, 0.7)',
+                                padding: '0.5rem 0.75rem',
+                                borderRadius: '6px',
+                                lineHeight: 1.4
+                            }}>
+                                <div style={{ fontWeight: 600, color: '#78350f' }}>{promo.title}</div>
+                                <div style={{ fontSize: '0.8125rem', color: '#92400e' }}>{promo.description}</div>
+                                {promo.validUntil && (
+                                    <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '0.25rem' }}>
+                                        {t('promotions.validUntilDate')} {new Date(promo.validUntil).toLocaleDateString()}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>1. {t('products.quickSearch')}</label>
             <input
                 ref={inputRef}
                 type="text"
                 className="input"
-                placeholder="Type product name, SKU, category, or keyword..."
+                placeholder={t('products.searchPlaceholder')}
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -76,7 +124,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onSelect }) => {
             {results.length > 0 && (
                 <ul style={{
                     position: 'absolute', top: '100%', left: 0, right: 0,
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--bg-card)', border: '1px solid var(--border)',
                     borderRadius: '0 0 4px 4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     zIndex: 10, listStyle: 'none', padding: 0, margin: 0,
                     maxHeight: '300px', overflowY: 'auto'
@@ -88,8 +136,8 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onSelect }) => {
                             style={{
                                 padding: '0.75rem 1rem',
                                 cursor: 'pointer',
-                                background: index === selectedIndex ? '#e0f2fe' : 'white',
-                                borderBottom: '1px solid #f1f5f9'
+                                background: index === selectedIndex ? 'var(--bg-hover)' : 'var(--bg-card)',
+                                borderBottom: '1px solid var(--border)'
                             }}
                         >
                             <div style={{ fontWeight: 600 }}>{p.name} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.9rem' }}>({p.category})</span></div>

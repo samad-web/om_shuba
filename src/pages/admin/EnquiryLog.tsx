@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import type { Enquiry, PipelineStage, Branch } from '../../types';
 import { storage } from '../../services/storage';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
 
 interface EnquiryLogProps {
     role?: 'telecaller' | 'admin' | 'branch_admin';
@@ -10,6 +12,8 @@ interface EnquiryLogProps {
 const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
     const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
     const { user } = useAuth();
+    const { confirm } = useConfirm();
+    const { showToast } = useToast();
 
     // Filters
     const [filterStage, setFilterStage] = useState<string>('');
@@ -25,7 +29,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
         setBranches(storage.getBranches());
     };
 
-    const handleStageChange = (id: string, newStage: PipelineStage) => {
+    const handleStageChange = async (id: string, newStage: PipelineStage) => {
         if (!user) return;
 
         let amount: number | undefined = undefined;
@@ -37,12 +41,22 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
 
         storage.updateEnquiryStage(id, newStage, user.id, undefined, amount);
         loadData(); // Reload to see changes
+        showToast('Stage updated successfully', 'success');
     };
 
-    const handleDelete = (id: string, name: string) => {
-        if (window.confirm(`Are you sure you want to delete the lead for "${name}"? This action cannot be undone.`)) {
+    const handleDelete = async (id: string, name: string) => {
+        const confirmed = await confirm({
+            title: 'Delete Lead',
+            message: `Are you sure you want to delete the lead for "${name}"? This action cannot be undone.`,
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            danger: true
+        });
+
+        if (confirmed) {
             storage.deleteEnquiry(id);
             loadData();
+            showToast('Lead deleted successfully', 'success');
         }
     };
 
@@ -90,7 +104,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                     <thead>
-                        <tr style={{ textAlign: 'left', background: '#f1f5f9' }}>
+                        <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)' }}>
                             <th style={{ padding: '0.75rem' }}>Date</th>
                             <th style={{ padding: '0.75rem' }}>Customer</th>
                             <th style={{ padding: '0.75rem' }}>Product</th>
@@ -142,7 +156,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
                                     )}
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
-                                    <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: '#f1f5f9' }}>{e.purchaseIntent}</span>
+                                    <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'var(--bg-secondary)' }}>{e.purchaseIntent}</span>
                                 </td>
                                 <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                                     <button

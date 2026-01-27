@@ -10,7 +10,18 @@ const KEYS = {
 
 // Initialize data - Always sync products and branches from mock data to ensure updates are reflected
 const init = () => {
-    if (!localStorage.getItem(KEYS.USERS)) localStorage.setItem(KEYS.USERS, JSON.stringify(MOCK_USERS));
+    // Merge MOCK_USERS with existing ones to ensure new branch admins are added automatically
+    const existingUsers = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
+    const mergedUsers = [...MOCK_USERS];
+
+    // Add any user-created accounts that aren't in mock data
+    existingUsers.forEach((u: User) => {
+        if (!mergedUsers.find(mu => mu.id === u.id)) {
+            mergedUsers.push(u);
+        }
+    });
+
+    localStorage.setItem(KEYS.USERS, JSON.stringify(mergedUsers));
 
     // Always sync products from mock data (for easy updates during development)
     localStorage.setItem(KEYS.PRODUCTS, JSON.stringify(MOCK_PRODUCTS));

@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import type { User, UserRole, Branch } from '../../types';
 import { storage } from '../../services/storage';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
 
 const UserManagement: React.FC = () => {
+    const { confirm } = useConfirm();
+    const { showToast } = useToast();
     const [users, setUsers] = useState<User[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [isAdding, setIsAdding] = useState(false);
@@ -68,10 +72,19 @@ const UserManagement: React.FC = () => {
         setIsAdding(true);
     };
 
-    const handleDelete = (id: string, name: string) => {
-        if (window.confirm(`Delete staff account for "${name}"? This cannot be undone.`)) {
+    const deleteUser = async (id: string, name: string) => {
+        const confirmed = await confirm({
+            title: 'Delete User',
+            message: `Delete staff account for "${name}"? This cannot be undone.`,
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            danger: true
+        });
+
+        if (confirmed) {
             storage.deleteUser(id);
-            loadData();
+            loadUsers();
+            showToast('User deleted successfully', 'success');
         }
     };
 
@@ -83,7 +96,7 @@ const UserManagement: React.FC = () => {
             </div>
 
             {isAdding && (
-                <div className="card" style={{ marginBottom: '2rem', background: '#f8fafc', border: '2px solid var(--primary-light)' }}>
+                <div className="card" style={{ marginBottom: '2rem', background: 'var(--bg-secondary)', border: '2px solid var(--primary-light)' }}>
                     <h4 style={{ marginBottom: '1.5rem' }}>{editingUser ? 'Edit Account' : 'Create New Account'}</h4>
                     <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         <div>
@@ -125,7 +138,7 @@ const UserManagement: React.FC = () => {
 
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                    <tr style={{ textAlign: 'left', background: '#f1f5f9' }}>
+                    <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)' }}>
                         <th style={{ padding: '1rem' }}>Name</th>
                         <th style={{ padding: '1rem' }}>Username</th>
                         <th style={{ padding: '1rem' }}>Role</th>

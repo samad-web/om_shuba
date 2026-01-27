@@ -8,6 +8,9 @@
   
   --bg-app: #dcfce7;        /* Fresh Green 100 Background */
   --bg-card: #ffffff;
+  --bg-secondary: #f8fafc;  /* Light gray for nested elements */
+  --bg-table-header: #f1f5f9; /* For table headers */
+  --bg-hover: #f1f5f9;      /* Hover states */
   
   --text-main: #064e3b;     /* Dark Emerald 900 */
   --text-muted: #304e3b;    /* Slightly darker for better visibility */
@@ -16,6 +19,7 @@
   
   --header-bg: rgba(255, 255, 255, 0.8);
   --input-bg: #f8fafc;
+  --input-focus-bg: white;  /* White background on focus in light mode */
   
   --danger: #dc2626;
   --success: #16a34a;
@@ -35,6 +39,9 @@
 
   --bg-app: #052e16;        /* Deep darkest green */
   --bg-card: #064e3b;       /* Dark Emerald 900 for cards */
+  --bg-secondary: #022c22;  /* Even darker for nested elements */
+  --bg-table-header: #14532d; /* For table headers */
+  --bg-hover: #14532d;      /* Hover states */
   
   --text-main: #f0fdf4;     /* Almost white green */
   --text-muted: #86efac;    /* Light green for muted text */
@@ -43,6 +50,7 @@
 
   --header-bg: rgba(5, 46, 22, 0.8);
   --input-bg: #022c22;
+  --input-focus-bg: #064e3b; /* Darker background on focus in dark mode */
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
@@ -136,7 +144,7 @@ input, select, textarea, button {
 .input:focus {
   outline: none;
   border-color: var(--primary);
-  background-color: white;
+  background-color: var(--input-focus-bg);
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
 }
 
@@ -161,4 +169,38 @@ input, select, textarea, button {
   position: sticky;
   top: 0;
   z-index: 50;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .card {
+    padding: 1rem;
+  }
+  
+  table {
+    font-size: 0.85rem;
+  }
+  
+  /* Make main content account for mobile menu button */
+  main.container {
+    padding-top: 4rem !important;
+  }
+}
+
+/* Table Responsiveness */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-container table {
+  min-width: 600px;
+}
+
+/* Touch-friendly buttons */
+@media (hover: none) {
+  .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

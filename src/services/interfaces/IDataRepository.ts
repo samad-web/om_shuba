@@ -1,4 +1,4 @@
-import type { User, Product, Branch, Enquiry, PipelineStage } from '../../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, Promotion } from '../../types';
 
 /**
  * Data Repository Interface
@@ -32,4 +32,10 @@ export interface IDataRepository {
     getEnquiriesByUser(userId: string): Promise<Enquiry[]>;
     addEnquiry(enquiry: Enquiry): Promise<void>;
     updateEnquiryStage(id: string, stage: PipelineStage, userId: string): Promise<void>;
+
+    // Promotion Operations
+    getPromotions(): Promise<Promotion[]>;
+    addPromotion(promotion: Promotion): Promise<void>;
+    updatePromotion(promotion: Promotion): Promise<void>;
+    deletePromotion(id: string): Promise<void>;
 }

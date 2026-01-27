@@ -61,7 +61,7 @@ const ConversionOverview: React.FC = () => {
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr style={{ textAlign: 'left', background: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
+                            <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)', borderBottom: '2px solid var(--border)' }}>
                                 <th style={{ padding: '1rem 0.5rem' }}>Date</th>
                                 <th style={{ padding: '1rem 0.5rem' }}>Customer</th>
                                 <th style={{ padding: '1rem 0.5rem' }}>Product</th>

@@ -1,0 +1,103 @@
+.promotion-banner {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2-4px 4px -1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.promotion-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  animation: slideFadeIn 0.5s ease;
+}
+
+@keyframes slideFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.promotion-badge {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.promotion-text {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.promotion-title {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.promotion-description {
+  opacity: 0.9;
+}
+
+.promotion-expiry {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.promotion-indicators {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.indicator.active {
+  background: white;
+  width: 12px;
+  border-radius: 3px;
+}
+
+@media (max-width: 768px) {
+  .promotion-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .promotion-text {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

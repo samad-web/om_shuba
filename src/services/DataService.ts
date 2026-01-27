@@ -64,6 +64,12 @@ export const storage = {
     addUser: (user: any) => repository.addUser(user),
     addEnquiry: (enquiry: any) => repository.addEnquiry(enquiry),
     updateEnquiryStage: (id: string, stage: any, userId: string) => repository.updateEnquiryStage(id, stage, userId),
+    getPromotions: () => {
+        return JSON.parse(localStorage.getItem('tc_promotions') || '[]');
+    },
+    addPromotion: (promotion: any) => repository.addPromotion(promotion),
+    updatePromotion: (promotion: any) => repository.updatePromotion(promotion),
+    deletePromotion: (id: string) => repository.deletePromotion(id),
     login: (username: string, password: string) => {
         repository.login(username, password);
         return JSON.parse(localStorage.getItem('tc_users') || '[]').find((u: any) => u.username === username && u.password === password);

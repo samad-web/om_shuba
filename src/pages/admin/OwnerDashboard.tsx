@@ -7,10 +7,13 @@ import BranchMaster from './BranchMaster';
 import EnquiryLog from './EnquiryLog';
 import UserManagement from './UserManagement';
 import AccountSettings from './AccountSettings';
+import PromotionManagement from '../../components/PromotionManagement';
 import { storage } from '../../services/storage';
 import { downloadBusinessReport } from '../../services/excelService';
+import { useSettings } from '../../context/SettingsContext';
 
 const OwnerDashboard: React.FC = () => {
+    const { t } = useSettings();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [metrics, setMetrics] = useState({
         activePipeline: 0,
@@ -115,39 +118,41 @@ const OwnerDashboard: React.FC = () => {
                 return <div className="card" style={{ height: 'auto' }}><UserManagement /></div>;
             case 'settings':
                 return <div className="card" style={{ height: 'auto' }}><AccountSettings /></div>;
+            case 'promotions':
+                return <div className="card" style={{ height: 'auto' }}><PromotionManagement /></div>;
             case 'dashboard':
             default:
                 return (
                     <>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                             <div>
-                                <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem' }}>OM SHUBA Command Center</h2>
+                                <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem' }}>{t('login.title')} {t('nav.dashboard')}</h2>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Business health and operations monitoring</p>
                             </div>
                             <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                <button className="btn" onClick={() => calculateMetrics()}>🔄 Refresh</button>
-                                <button className="btn btn-primary" onClick={handleExport} style={{ borderRadius: '12px', padding: '0.75rem 1.5rem' }}>Export Data</button>
+                                <button className="btn" onClick={() => calculateMetrics()}>🔄 {t('common.refresh')}</button>
+                                <button className="btn btn-primary" onClick={handleExport} style={{ borderRadius: '12px', padding: '0.75rem 1.5rem' }}>{t('owner.exportData')}</button>
                             </div>
                         </div>
 
                         {/* Top Metrics */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
                             <StatCard
-                                title="Active Lead Pipeline"
+                                title={t('metrics.activePipeline')}
                                 value={metrics.activePipeline.toString()}
                                 trend="8.4%" trendType="up"
                                 sparklineData={[20, 30, 25, 45, 40, 55, 65]}
                             />
                             <StatCard
-                                title="Sales Conversion"
+                                title={t('metrics.conversion')}
                                 value={`${metrics.conversionRate}%`}
                                 trend="1.2%" trendType="up"
                                 sparklineData={[10, 15, 12, 18, 20, 22, 25]}
                             />
                             <StatCard
-                                title="Closed Deals Revenue"
+                                title={t('metrics.revenue')}
                                 value={`₹${(metrics.totalRevenue / 100000).toFixed(2)}L`}
-                                trend="Actual Sales" trendType="up"
+                                trend={t('metrics.actualSales')} trendType="up"
                                 sparklineData={[40, 50, 60, 55, 75, 80, 95]}
                             />
                         </div>
@@ -155,9 +160,9 @@ const OwnerDashboard: React.FC = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.3fr', gap: '1.5rem', marginBottom: '2rem' }}>
                             <div style={{ gridColumn: 'span 1' }}>
                                 <GaugeWidget
-                                    title="Demo Fulfillment Rate"
+                                    title={t('metrics.demoFulfillment')}
                                     percentage={metrics.demoFulfillment}
-                                    subtext="Scheduled vs Completed visits"
+                                    subtext={t('metrics.scheduledCompleted')}
                                 />
                             </div>
 
@@ -242,7 +247,7 @@ const OwnerDashboard: React.FC = () => {
     };
 
     return (
-        <div style={{ display: 'flex', background: '#f8fafc', height: '100vh', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', background: 'var(--bg-app)', height: '100vh', overflow: 'hidden' }}>
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
             <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>

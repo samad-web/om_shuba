@@ -10,35 +10,49 @@ import TelecallerDashboard from './pages/telecaller/TelecallerDashboard';
 // Placeholders for now
 
 import { SettingsProvider } from './context/SettingsContext';
+import { ToastProvider } from './components/Toast';
+import { LoadingProvider } from './context/LoadingContext';
+import { ConfirmProvider } from './components/ConfirmDialog';
+
+import SettingsToggle from './components/SettingsToggle';
 
 function App() {
   return (
     <SettingsProvider>
-      <Router>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
+      <ToastProvider>
+        <LoadingProvider>
+          <ConfirmProvider>
+            <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999 }}>
+              <SettingsToggle />
+            </div>
+            <Router>
+              <AuthProvider>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
 
-            <Route element={<ProtectedRoute />}>
-              <Route element={<ProtectedRoute />}>
-                <Route path="/owner" element={<ProtectedRoute allowedRoles={['admin']} />}>
-                  <Route index element={<OwnerDashboard />} />
-                </Route>
+                  <Route element={<ProtectedRoute />}>
+                    <Route element={<ProtectedRoute />}>
+                      <Route path="/owner" element={<ProtectedRoute allowedRoles={['admin']} />}>
+                        <Route index element={<OwnerDashboard />} />
+                      </Route>
 
-                <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']} />}>
-                  <Route index element={<AdminDashboard />} />
-                </Route>
+                      <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']} />}>
+                        <Route index element={<AdminDashboard />} />
+                      </Route>
 
-                <Route path="/telecaller" element={<ProtectedRoute allowedRoles={['telecaller']} />}>
-                  <Route index element={<TelecallerDashboard />} />
-                </Route>
-              </Route>
-            </Route>
+                      <Route path="/telecaller" element={<ProtectedRoute allowedRoles={['telecaller']} />}>
+                        <Route index element={<TelecallerDashboard />} />
+                      </Route>
+                    </Route>
+                  </Route>
 
-            <Route path="/" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </AuthProvider>
-      </Router>
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+                </Routes>
+              </AuthProvider>
+            </Router>
+          </ConfirmProvider>
+        </LoadingProvider>
+      </ToastProvider>
     </SettingsProvider>
   );
 }
