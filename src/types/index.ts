@@ -18,6 +18,7 @@ export interface Product {
   priceRange: string;
   demoUrl?: string; // Optional
   active: boolean;
+  branchId?: string; // For branch-specific products
 }
 
 export interface Branch {

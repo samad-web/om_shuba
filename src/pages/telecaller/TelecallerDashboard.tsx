@@ -23,6 +23,7 @@ const TelecallerDashboard: React.FC = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [metrics, setMetrics] = useState({ capturedToday: 0, qualifiedRate: 0, scheduledDemos: 0 });
     const [loading, setLoading] = useState(true);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     // Form State
     const [customerName, setCustomerName] = useState('');
@@ -119,8 +120,36 @@ const TelecallerDashboard: React.FC = () => {
         }
     };
 
+    const handleNavClick = (tabId: string) => {
+        if (tabId === 'enquiries' || tabId === 'conversions') {
+            setActiveTab(tabId);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            // If on another tab, go to dashboard first
+            if (activeTab !== 'dashboard') {
+                setActiveTab('dashboard');
+                // Small delay to allow react to render the dashboard before scrolling
+                setTimeout(() => {
+                    const element = document.getElementById(`section-${tabId}`);
+                    if (element) {
+                        const offset = 100; // Account for fixed header
+                        const top = element.getBoundingClientRect().top + window.pageYOffset - offset;
+                        window.scrollTo({ top, behavior: 'smooth' });
+                    }
+                }, 100);
+            } else {
+                const element = document.getElementById(`section-${tabId}`);
+                if (element) {
+                    const offset = 100;
+                    const top = element.getBoundingClientRect().top + window.pageYOffset - offset;
+                    window.scrollTo({ top, behavior: 'smooth' });
+                }
+            }
+        }
+    };
+
     const renderDashboard = () => (
-        <>
+        <div id="section-dashboard" className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
                     <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem' }}>{t('nav.dashboard')}, {user?.name}</h2>
@@ -138,7 +167,7 @@ const TelecallerDashboard: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '2rem' }}>
                 {/* Capture Section */}
-                <div className="card" style={{ padding: '2rem' }}>
+                <div id="section-products" className="card" style={{ padding: '2rem', scrollMarginTop: '100px' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontSize: '1.5rem' }}>🎯</span> {t('telecaller.quickCapture')}
                     </h3>
@@ -202,10 +231,10 @@ const TelecallerDashboard: React.FC = () => {
                 </div>
 
                 {/* Recent List */}
-                <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div id="section-recent" className="card" style={{ display: 'flex', flexDirection: 'column', scrollMarginTop: '100px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <h4 style={{ fontWeight: 700 }}>{t('telecaller.yourRecent')}</h4>
-                        <button className="btn" style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }} onClick={() => setActiveTab('enquiries')}>{t('telecaller.viewAll')}</button>
+                        <button className="btn" style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }} onClick={() => handleNavClick('enquiries')}>{t('telecaller.viewAll')}</button>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {myEnquiries.slice(0, 5).map(e => (
@@ -224,27 +253,62 @@ const TelecallerDashboard: React.FC = () => {
                                 </div>
                             </div>
                         ))}
+                        {myEnquiries.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                No recent captures found.
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'enquiries': return <div className="card" style={{ height: 'auto' }}><EnquiryLog role="telecaller" /></div>;
-            case 'conversions': return <ConversionOverview />;
+            case 'enquiries': return <div className="card animate-fade-in" style={{ height: 'auto' }}><EnquiryLog role="telecaller" /></div>;
+            case 'conversions': return <div className="animate-fade-in"><ConversionOverview /></div>;
             case 'dashboard':
             default: return renderDashboard();
         }
     };
 
     return (
-        <div style={{ display: 'flex', background: 'var(--bg-app)', height: '100vh', overflow: 'hidden' }}>
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-            <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', background: 'var(--bg-app)', minHeight: '100vh', position: 'relative' }}>
+            <Sidebar activeTab={activeTab} setActiveTab={handleNavClick} onCollapseChange={setIsCollapsed} />
+            <main style={{
+                flex: 1,
+                padding: '2rem 3rem',
+                marginLeft: isCollapsed ? '80px' : '260px', // Matches dynamic sidebar width
+                transition: 'margin-left 300ms ease',
+                position: 'relative'
+            }}>
+                {loading && (
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(255,255,255,0.8)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 50,
+                        borderRadius: 'var(--radius-lg)'
+                    }}>
+                        <div className="animate-spin" style={{ width: '40px', height: '40px', border: '4px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
+                    </div>
+                )}
                 {renderContent()}
             </main>
+
+            <style>{`
+                @media (max-width: 1024px) {
+                    main { margin-left: 80px !important; padding: 2rem !important; }
+                }
+                @media (max-width: 768px) {
+                    main { margin-left: 0 !important; padding: 1.5rem !important; padding-bottom: 90px !important; }
+                }
+            `}</style>
         </div>
     );
 };

@@ -6,13 +6,26 @@ interface StatCardProps {
     trend: string;
     trendType: 'up' | 'down';
     sparklineData: number[];
+    onClick?: () => void;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendType, sparklineData }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendType, sparklineData, onClick }) => {
     return (
-        <div className="card animate-fade-in" style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-6)' }}>
+        <div
+            className={`card animate-fade-in ${onClick ? 'clickable-card' : ''}`}
+            onClick={onClick}
+            style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: 'var(--space-6)',
+                cursor: onClick ? 'pointer' : 'default',
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+        >
             <div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 'var(--space-1)', opacity: 0.8 }}>
+                <div style={{ color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 850, marginBottom: 'var(--space-1)', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                     {title}
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: 'var(--space-2)', letterSpacing: '-0.03em' }}>
@@ -55,6 +68,14 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendType, spa
                 @keyframes growUp {
                     from { height: 0; }
                     to { height: inherit; }
+                }
+                .clickable-card:hover {
+                    transform: translateY(-4px) scale(1.02);
+                    box-shadow: var(--shadow-lg);
+                    border-color: var(--primary) !important;
+                }
+                .clickable-card:active {
+                    transform: translateY(-2px) scale(1);
                 }
                 `}
             </style>

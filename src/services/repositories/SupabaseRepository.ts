@@ -33,7 +33,8 @@ export class SupabaseRepository implements IDataRepository {
             shortDescription: data.short_description,
             priceRange: data.price_range,
             demoUrl: data.demo_url,
-            active: data.active
+            active: data.active,
+            branchId: data.branch_id
         };
     }
 
@@ -202,6 +203,15 @@ export class SupabaseRepository implements IDataRepository {
         return (data || []).map(this.mapProduct);
     }
 
+    async getProductsByBranch(branchId: string): Promise<Product[]> {
+        const { data, error } = await this.supabase
+            .from('products')
+            .select('*')
+            .eq('branch_id', branchId);
+        if (error) throw error;
+        return (data || []).map(this.mapProduct);
+    }
+
     async getProductById(id: string): Promise<Product | null> {
         const { data, error } = await this.supabase
             .from('products')
@@ -221,7 +231,8 @@ export class SupabaseRepository implements IDataRepository {
             short_description: product.shortDescription,
             price_range: product.priceRange,
             demo_url: product.demoUrl,
-            active: product.active
+            active: product.active,
+            branch_id: product.branchId
         }]);
         if (error) throw error;
     }
@@ -236,7 +247,8 @@ export class SupabaseRepository implements IDataRepository {
                 short_description: product.shortDescription,
                 price_range: product.priceRange,
                 demo_url: product.demoUrl,
-                active: product.active
+                active: product.active,
+                branch_id: product.branchId
             })
             .eq('id', product.id);
         if (error) throw error;

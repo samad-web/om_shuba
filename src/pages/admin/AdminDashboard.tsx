@@ -17,6 +17,8 @@ const AdminDashboard: React.FC = () => {
     const [metrics, setMetrics] = useState({ branchLeads: 0, demosDone: 0, activeProducts: 0 });
     const [loading, setLoading] = useState(true);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [branches, setBranches] = useState<any[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
 
     useEffect(() => {
         calculateMetrics();
@@ -25,18 +27,23 @@ const AdminDashboard: React.FC = () => {
     const calculateMetrics = async () => {
         setLoading(true);
         try {
-            const [enquiries, products] = await Promise.all([
+            const [enquiries, products, fetchedBranches] = await Promise.all([
                 dataService.getEnquiries(),
-                dataService.getProducts()
+                dataService.getProducts(),
+                dataService.getBranches()
             ]);
 
-            const branchLeads = user?.role === 'branch_admin'
-                ? enquiries.filter(e => e.branchId === user.branchId).length
-                : enquiries.length;
+            setBranches(fetchedBranches);
 
-            const demos = user?.role === 'branch_admin'
-                ? enquiries.filter(e => e.branchId === user.branchId && e.pipelineStage === 'Demo/Visit Done').length
-                : enquiries.filter(e => e.pipelineStage === 'Demo/Visit Done').length;
+            const effectiveBranchId = user?.role === 'branch_admin' ? user.branchId : selectedBranchId;
+
+            const filteredEnquiries = effectiveBranchId && effectiveBranchId !== 'all'
+                ? enquiries.filter(e => e.branchId === effectiveBranchId)
+                : enquiries;
+
+            const branchLeads = filteredEnquiries.length;
+
+            const demos = filteredEnquiries.filter(e => e.pipelineStage === 'Demo/Visit Done').length;
 
             setMetrics({
                 branchLeads,
@@ -50,6 +57,10 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        calculateMetrics();
+    }, [selectedBranchId]);
+
     const renderDashboard = () => (
         <div className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-8)' }}>
@@ -57,9 +68,26 @@ const AdminDashboard: React.FC = () => {
                     <h1 style={{ fontSize: '2.25rem', marginBottom: 'var(--space-1)' }}>
                         {t('admin.dashboard_title')}
                     </h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem', fontWeight: 500 }}>
-                        Welcome back, <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{user?.name}</span>. Here's what's happening today.
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem', fontWeight: 500 }}>
+                            Welcome back, <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{user?.name}</span>.
+                        </p>
+                        {user?.role === 'admin' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', background: 'var(--bg-card)', padding: '4px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Branch:</span>
+                                <select
+                                    value={selectedBranchId}
+                                    onChange={(e) => setSelectedBranchId(e.target.value)}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                                >
+                                    <option value="all">All Branches</option>
+                                    {branches.map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <button className="btn btn-primary" onClick={calculateMetrics} style={{ height: '44px' }}>
                     <span>🔄</span> {t('common.refresh')}
@@ -80,11 +108,12 @@ const AdminDashboard: React.FC = () => {
                     sparklineData={[30, 45, 40, 60, 55, 75, 80]}
                 />
                 <StatCard
-                    title={t('metrics.demoConversions')}
-                    value={metrics.demosDone.toString()}
-                    trend="+5%"
+                    title="Closed Deals"
+                    value={metrics.demosDone.toString()} // Using demosDone as a proxy for closed deals for now as per dashboard logic
+                    trend="+15%"
                     trendType="up"
                     sparklineData={[10, 15, 12, 18, 20, 25, 30]}
+                    onClick={() => setActiveTab('conversions')}
                 />
                 <StatCard
                     title={t('metrics.activeInventory')}
@@ -107,7 +136,7 @@ const AdminDashboard: React.FC = () => {
                             View All
                         </button>
                     </div>
-                    <EnquiryLog />
+                    <EnquiryLog branchId={user?.role === 'branch_admin' ? user?.branchId : selectedBranchId} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
@@ -145,15 +174,15 @@ const AdminDashboard: React.FC = () => {
                                 onClick={() => setActiveTab('products')}
                             >
                                 <span style={{ fontSize: '1.5rem' }}>📦</span>
-                                <span style={{ fontWeight: 700 }}>Products</span>
+                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>Products</span>
                             </button>
                             <button
                                 className="btn"
                                 style={{ background: 'var(--bg-secondary)', border: 'none', padding: 'var(--space-4)', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-1)' }}
-                                onClick={() => setActiveTab('branches')}
+                                onClick={() => setActiveTab('conversions')}
                             >
-                                <span style={{ fontSize: '1.5rem' }}>🏢</span>
-                                <span style={{ fontWeight: 700 }}>Branches</span>
+                                <span style={{ fontSize: '1.5rem' }}>🤝</span>
+                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>Closed Deals</span>
                             </button>
                         </div>
                     </div>
@@ -164,14 +193,14 @@ const AdminDashboard: React.FC = () => {
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'products': return <div className="card animate-fade-in"><ProductMaster /></div>;
+            case 'products': return <div className="card animate-fade-in"><ProductMaster branchId={user?.role === 'branch_admin' ? user?.branchId : selectedBranchId} /></div>;
             case 'branches':
                 if (user?.role === 'branch_admin') {
                     setActiveTab('dashboard');
                     return renderDashboard();
                 }
                 return <div className="card animate-fade-in"><BranchMaster /></div>;
-            case 'enquiries': return <div className="card animate-fade-in"><EnquiryLog role={user?.role === 'branch_admin' ? 'branch_admin' : 'admin'} /></div>;
+            case 'enquiries': return <div className="card animate-fade-in"><EnquiryLog role={user?.role === 'branch_admin' ? 'branch_admin' : 'admin'} branchId={user?.role === 'branch_admin' ? user?.branchId : selectedBranchId} /></div>;
             case 'conversions': return <div className="animate-fade-in"><ConversionOverview /></div>;
             case 'promotions': return <div className="card animate-fade-in"><PromotionManagement /></div>;
             case 'dashboard':
@@ -180,19 +209,26 @@ const AdminDashboard: React.FC = () => {
     };
 
     return (
-        <div style={{ display: 'flex', gap: 'var(--space-8)', minHeight: 'calc(100vh - 120px)' }}>
+        <div style={{ display: 'flex', background: 'var(--bg-app)', minHeight: '100vh', position: 'relative' }}>
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onCollapseChange={setIsCollapsed} />
-            <div style={{ flex: 1, marginLeft: isCollapsed ? '88px' : '260px', transition: 'margin-left 300ms ease' }} className="main-content-wrapper">
+            <div style={{
+                flex: 1,
+                padding: '2rem 3rem',
+                marginLeft: isCollapsed ? '80px' : '260px',
+                transition: 'margin-left 300ms ease',
+                minHeight: '100vh',
+                position: 'relative'
+            }} className="main-content-wrapper">
                 {renderContent()}
             </div>
 
             <style>
                 {`
                 @media (max-width: 1024px) {
-                    .main-content-wrapper { marginLeft: 88px !important; }
+                    .main-content-wrapper { margin-left: 80px !important; padding: 2rem !important; }
                 }
                 @media (max-width: 768px) {
-                    .main-content-wrapper { marginLeft: 0 !important; paddingBottom: 80px; }
+                    .main-content-wrapper { margin-left: 0 !important; padding: 1.5rem !important; padding-bottom: 90px !important; }
                 }
                 `}
             </style>

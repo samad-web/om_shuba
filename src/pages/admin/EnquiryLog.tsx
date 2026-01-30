@@ -7,9 +7,10 @@ import { useToast } from '../../components/Toast';
 
 interface EnquiryLogProps {
     role?: 'telecaller' | 'admin' | 'branch_admin';
+    branchId?: string;
 }
 
-const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
+const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
     const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
     const { user } = useAuth();
     const { confirm } = useConfirm();
@@ -95,13 +96,14 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
         // Telecaller can only see their own enquiries in this view
         if (role === 'telecaller' && e.createdBy !== user?.id) return false;
 
-        // Branch admin can only see their branch's enquiries
-        if (user?.role === 'branch_admin' && user.branchId && e.branchId !== user.branchId) {
+        // Effective branch filter: prop takes priority, then user.branchId for branch_admin, then local filter
+        const effectiveBranchId = branchId || (user?.role === 'branch_admin' ? user.branchId : filterBranch);
+
+        if (effectiveBranchId && effectiveBranchId !== 'all' && e.branchId !== effectiveBranchId) {
             return false;
         }
 
         if (filterStage && e.pipelineStage !== filterStage) return false;
-        if (filterBranch && e.branchId !== filterBranch) return false;
         return true;
     });
 

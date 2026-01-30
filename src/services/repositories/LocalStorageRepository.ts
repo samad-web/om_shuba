@@ -32,9 +32,26 @@ export class LocalStorageRepository implements IDataRepository {
         // Initialize branches once
         if (!localStorage.getItem(KEYS.BRANCHES)) {
             localStorage.setItem(KEYS.BRANCHES, JSON.stringify(MOCK_BRANCHES));
+        } else {
+            // Ensure Hosur Branch exists in local storage for migration
+            const currentBranches = JSON.parse(localStorage.getItem(KEYS.BRANCHES) || '[]');
+            if (!currentBranches.find((b: any) => b.id === 'b4')) {
+                currentBranches.push(MOCK_BRANCHES.find(b => b.id === 'b4'));
+                localStorage.setItem(KEYS.BRANCHES, JSON.stringify(currentBranches));
+            }
         }
 
-        // Initialize enquiries
+        // Initialize users
+        if (!localStorage.getItem(KEYS.USERS)) {
+            localStorage.setItem(KEYS.USERS, JSON.stringify(MOCK_USERS));
+        } else {
+            // Ensure admin-hosur exists in local storage for migration
+            const currentUsers = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
+            if (!currentUsers.find((u: any) => u.username === 'admin-hosur')) {
+                currentUsers.push(MOCK_USERS.find(u => u.username === 'admin-hosur'));
+                localStorage.setItem(KEYS.USERS, JSON.stringify(currentUsers));
+            }
+        }
         if (!localStorage.getItem(KEYS.ENQUIRIES)) {
             localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify([]));
         }
@@ -98,6 +115,11 @@ export class LocalStorageRepository implements IDataRepository {
     // Product Operations
     async getProducts(): Promise<Product[]> {
         return JSON.parse(localStorage.getItem(KEYS.PRODUCTS) || '[]');
+    }
+
+    async getProductsByBranch(branchId: string): Promise<Product[]> {
+        const products = await this.getProducts();
+        return products.filter(p => p.branchId === branchId);
     }
 
     async getProductById(id: string): Promise<Product | null> {

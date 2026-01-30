@@ -3,7 +3,11 @@ import type { Product } from '../../types';
 import { dataService } from '../../services/DataService';
 import { downloadProductTemplate, parseProductExcel, type BulkUploadResult } from '../../services/excelService';
 
-const ProductMaster: React.FC = () => {
+interface ProductMasterProps {
+    branchId?: string;
+}
+
+const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,7 +29,9 @@ const ProductMaster: React.FC = () => {
     const loadProducts = async () => {
         setLoading(true);
         try {
-            const data = await dataService.getProducts();
+            const data = branchId && branchId !== 'all'
+                ? await dataService.getProductsByBranch(branchId)
+                : await dataService.getProducts();
             setProducts(data);
         } catch (error) {
             console.error("Failed to load products", error);
@@ -57,7 +63,7 @@ const ProductMaster: React.FC = () => {
             if (editingProduct) {
                 await dataService.updateProduct({ ...editingProduct, ...formData } as Product);
             } else {
-                await dataService.addProduct({ ...formData, id: 'p' + Date.now() } as Product);
+                await dataService.addProduct({ ...formData, id: 'p' + Date.now(), branchId: (branchId && branchId !== 'all') ? branchId : undefined } as Product);
             }
             setIsModalOpen(false);
             loadProducts();
@@ -152,7 +158,7 @@ const ProductMaster: React.FC = () => {
                         />
                         <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
                     </div>
-                    <button className="btn" onClick={handleDownloadTemplate} title="Download Template">📥</button>
+                    <button className="btn" onClick={handleDownloadTemplate} title="Download Template">📁⬇️</button>
                     <input
                         ref={fileInputRef}
                         type="file"
@@ -160,7 +166,7 @@ const ProductMaster: React.FC = () => {
                         onChange={handleFileSelect}
                         style={{ display: 'none' }}
                     />
-                    <button className="btn" onClick={() => fileInputRef.current?.click()} title="Upload Excel">📤</button>
+                    <button className="btn" onClick={() => fileInputRef.current?.click()} title="Upload Excel">📄⬆️</button>
                     <button className="btn btn-primary" onClick={() => openModal()}>+ Add Product</button>
                 </div>
             </div>
@@ -169,13 +175,13 @@ const ProductMaster: React.FC = () => {
                 {categories.map(category => (
                     <div key={category} className="card" style={{ padding: '1.5rem', border: '1px solid var(--border)' }}>
                         <h4 style={{
-                            fontSize: '1rem',
-                            fontWeight: 700,
-                            marginBottom: '1rem',
-                            color: 'var(--primary-dark)',
+                            fontSize: '1.1rem',
+                            fontWeight: 800,
+                            marginBottom: '1.25rem',
+                            color: 'var(--primary)',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.5rem',
+                            gap: '0.625rem',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                         }}>
@@ -184,20 +190,29 @@ const ProductMaster: React.FC = () => {
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)', borderBottom: '2px solid var(--border)' }}>
-                                        <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>Name / SKU</th>
-                                        <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>Description</th>
-                                        <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>Price Range</th>
-                                        <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>Status</th>
-                                        <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem', textAlign: 'right' }}>Actions</th>
+                                    <tr style={{ textAlign: 'left', background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)' }}>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>NAME / SKU</th>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>DESCRIPTION</th>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>PRICE RANGE</th>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>STATUS</th>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800, textAlign: 'right' }}>ACTIONS</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {groupedProducts[category].map(p => (
                                         <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                            <td style={{ padding: '1rem 0.5rem' }}>
-                                                <div style={{ fontWeight: 600, color: '#1e293b' }}>{p.name}</div>
-                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.sku}</div>
+                                            <td style={{ padding: '1.25rem 0.75rem' }}>
+                                                <div style={{
+                                                    fontWeight: 800,
+                                                    color: '#FFFFFF',
+                                                    fontSize: '1rem',
+                                                    textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                                    filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
+                                                    marginBottom: '0.25rem'
+                                                }}>
+                                                    {p.name}
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{p.sku}</div>
                                             </td>
                                             <td style={{ padding: '1rem 0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '250px' }}>
                                                 {p.shortDescription}
@@ -249,11 +264,13 @@ const ProductMaster: React.FC = () => {
 
             {isModalOpen && (
                 <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    zIndex: 1000
+                    position: 'fixed', inset: 0,
+                    background: 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(8px) brightness(0.9)',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    zIndex: 2000
                 }}>
-                    <div className="card" style={{ width: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
+                    <div className="card animate-fade-in" style={{ width: '500px', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
                         <h3 style={{ marginBottom: '1.5rem' }}>{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
                         <form onSubmit={handleSubmit}>
                             <div style={{ marginBottom: '1rem' }}>
@@ -292,11 +309,13 @@ const ProductMaster: React.FC = () => {
             {/* Upload Confirmation Dialog */}
             {showConfirmDialog && uploadResult && (
                 <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    zIndex: 1000
+                    position: 'fixed', inset: 0,
+                    background: 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(8px) brightness(0.9)',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    zIndex: 2000
                 }}>
-                    <div className="card" style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+                    <div className="card animate-fade-in" style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
                         <h3 style={{ marginBottom: '1rem' }}>Confirm Excel Upload</h3>
                         <div style={{ marginBottom: '1.5rem', background: 'var(--bg-app)', padding: '1rem', borderRadius: '12px' }}>
                             <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
@@ -338,11 +357,13 @@ const ProductMaster: React.FC = () => {
             {/* Upload Error Dialog */}
             {uploadResult && !uploadResult.success && (
                 <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    zIndex: 1000
+                    position: 'fixed', inset: 0,
+                    background: 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(8px) brightness(0.9)',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    zIndex: 2000
                 }}>
-                    <div className="card" style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+                    <div className="card animate-fade-in" style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
                         <h3 style={{ color: '#dc2626', marginBottom: '1rem' }}>Upload Errors Found</h3>
                         <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem' }}>
                             Please fix the following validation errors in your Excel file and try again:

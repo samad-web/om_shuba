@@ -14,7 +14,7 @@ INSERT INTO users (id, username, password, role, name, branch_id) VALUES
 ('u4', 'admin_attrupalam', 'password', 'branch_admin', 'Attrupalam Admin', 'b1'),
 ('u5', 'admin_periamuthu', 'password', 'branch_admin', 'Periamuthu Admin', 'b2'),
 ('u6', 'admin_tirupathur', 'password', 'branch_admin', 'Tirupathur Admin', 'b3'),
-('u7', 'admin_hosur', 'password', 'branch_admin', 'Hosur Admin', 'b4')
+('u7', 'hosur-admin', 'hosurpass', 'branch_admin', 'Hosur Admin', 'b4')
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed Products

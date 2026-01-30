@@ -16,6 +16,7 @@ export interface IDataRepository {
 
     // Product Operations
     getProducts(): Promise<Product[]>;
+    getProductsByBranch(branchId: string): Promise<Product[]>;
     getProductById(id: string): Promise<Product | null>;
     addProduct(product: Product): Promise<void>;
     updateProduct(product: Product): Promise<void>;

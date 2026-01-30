@@ -9,7 +9,7 @@ export const MOCK_USERS: User[] = [
     { id: 'u4', username: 'admin_attrupalam', password: 'password', role: 'branch_admin', name: 'Attrupalam Admin', branchId: 'b1' },
     { id: 'u5', username: 'admin_periamuthu', password: 'password', role: 'branch_admin', name: 'Periamuthu Admin', branchId: 'b2' },
     { id: 'u6', username: 'admin_tirupathur', password: 'password', role: 'branch_admin', name: 'Tirupathur Admin', branchId: 'b3' },
-    { id: 'u7', username: 'admin_hosur', password: 'password', role: 'branch_admin', name: 'Hosur Admin', branchId: 'b4' },
+    { id: 'u7', username: 'hosur-admin', password: 'hosurpass', role: 'branch_admin', name: 'Hosur Admin', branchId: 'b4' },
 ];
 
 export const MOCK_BRANCHES: Branch[] = [

@@ -63,7 +63,14 @@ const PromotionManagement: React.FC = () => {
     return (
         <div className="promotion-mgmt">
             <div className="mgmt-header">
-                <h2>Promotions & Offers</h2>
+                <h2 style={{
+                    color: 'var(--primary)',
+                    fontWeight: 850,
+                    fontSize: '1.75rem',
+                    letterSpacing: '-0.02em',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                    marginBottom: 'var(--space-2)'
+                }}>Promotions & Offers</h2>
                 <button className="btn-add" onClick={() => {
                     setIsEditing(true);
                     setCurrentPromotion({ title: '', description: '', active: true, validUntil: '' });
