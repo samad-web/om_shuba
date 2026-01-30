@@ -10,6 +10,8 @@ export interface IDataRepository {
     getUsers(): Promise<User[]>;
     getUserById(id: string): Promise<User | null>;
     addUser(user: User): Promise<void>;
+    updateUser(user: User): Promise<void>;
+    deleteUser(id: string): Promise<void>;
     login(username: string, password: string): Promise<User | null>;
 
     // Product Operations
@@ -31,11 +33,15 @@ export interface IDataRepository {
     getEnquiriesByBranch(branchId: string): Promise<Enquiry[]>;
     getEnquiriesByUser(userId: string): Promise<Enquiry[]>;
     addEnquiry(enquiry: Enquiry): Promise<void>;
-    updateEnquiryStage(id: string, stage: PipelineStage, userId: string): Promise<void>;
+    updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number): Promise<void>;
+    deleteEnquiry(id: string): Promise<void>;
 
     // Promotion Operations
     getPromotions(): Promise<Promotion[]>;
     addPromotion(promotion: Promotion): Promise<void>;
     updatePromotion(promotion: Promotion): Promise<void>;
     deletePromotion(id: string): Promise<void>;
+
+    // Feedback Operations
+    addFeedback(feedback: { userId: string; message: string; rating: number }): Promise<void>;
 }

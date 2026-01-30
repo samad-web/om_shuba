@@ -1,36 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import type { Enquiry } from '../../types';
-import { storage } from '../../services/storage';
+import { dataService } from '../../services/DataService';
 import { useAuth } from '../../context/AuthContext';
 
 const ConversionOverview: React.FC = () => {
     const { user } = useAuth();
     const [deals, setDeals] = useState<Enquiry[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
     const [stats, setStats] = useState({ totalValue: 0, count: 0, avgValue: 0 });
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadDeals();
-    }, []);
+        loadData();
+    }, [user]);
 
-    const loadDeals = () => {
-        const all = storage.getEnquiries();
-        const converted = all.filter(e => e.pipelineStage === 'Closed-Converted');
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [allEnquiries, allProducts] = await Promise.all([
+                dataService.getEnquiries(),
+                dataService.getProducts()
+            ]);
 
-        // Filter by role access
-        const filtered = converted.filter(e => {
-            if (user?.role === 'telecaller') return e.createdBy === user.id;
-            if (user?.role === 'branch_admin') return e.branchId === user.branchId;
-            return true; // Admin/Owner sees all
-        });
+            setProducts(allProducts);
 
-        const totalValue = filtered.reduce((sum, e) => sum + (e.closedAmount || 0), 0);
+            const converted = allEnquiries.filter(e => e.pipelineStage === 'Closed-Converted');
 
-        setDeals(filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-        setStats({
-            totalValue,
-            count: filtered.length,
-            avgValue: filtered.length > 0 ? Math.round(totalValue / filtered.length) : 0
-        });
+            // Filter by role access
+            const filtered = converted.filter(e => {
+                if (user?.role === 'telecaller') return e.createdBy === user.id;
+                if (user?.role === 'branch_admin') return e.branchId === user.branchId;
+                return true; // Admin/Owner sees all
+            });
+
+            const totalValue = filtered.reduce((sum, e) => sum + (e.closedAmount || 0), 0);
+
+            setDeals(filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setStats({
+                totalValue,
+                count: filtered.length,
+                avgValue: filtered.length > 0 ? Math.round(totalValue / filtered.length) : 0
+            });
+        } catch (error) {
+            console.error("Failed to load conversion data", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -55,7 +70,7 @@ const ConversionOverview: React.FC = () => {
             <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <h4 style={{ fontWeight: 800 }}>Recent Converted Deals</h4>
-                    <button className="btn" onClick={loadDeals} style={{ fontSize: '0.75rem' }}>🔄 Refresh</button>
+                    <button className="btn" onClick={loadData} style={{ fontSize: '0.75rem' }}>🔄 Refresh</button>
                 </div>
 
                 <div style={{ overflowX: 'auto' }}>
@@ -79,7 +94,7 @@ const ConversionOverview: React.FC = () => {
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{deal.phoneNumber}</div>
                                     </td>
                                     <td style={{ padding: '1rem 0.5rem', fontSize: '0.85rem' }}>
-                                        {storage.getProducts().find(p => p.id === deal.productId)?.name || 'Product'}
+                                        {products.find(p => p.id === deal.productId)?.name || 'Product'}
                                     </td>
                                     <td style={{ padding: '1rem 0.5rem', textAlign: 'right', fontWeight: 800, color: 'var(--primary)' }}>
                                         ₹{deal.closedAmount?.toLocaleString()}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Product, Promotion } from '../types';
 import { useSettings } from '../context/SettingsContext';
-import { storage } from '../services/storage';
+// import { storage } from '../services/storage'; // Removed storage import
 import { dataService } from '../services/DataService';
 
 interface ProductSearchProps {
@@ -18,7 +18,11 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onSelect }) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setAllProducts(storage.getProducts().filter(p => p.active));
+        const loadData = async () => {
+            const products = await dataService.getProducts();
+            setAllProducts(products.filter(p => p.active));
+        };
+        loadData();
         loadPromotions();
     }, []);
 

@@ -59,8 +59,70 @@ export class SupabaseRepository implements IDataRepository {
             pipelineStage: data.pipeline_stage,
             createdBy: data.created_by,
             createdAt: data.created_at,
+            closedAmount: data.closed_amount,
             history: history
         };
+    }
+
+    // ... (skipping mapPromotion)
+
+    // ...
+
+    async addEnquiry(enquiry: Enquiry): Promise<void> {
+        const { error: enqError } = await this.supabase.from('enquiries').insert([{
+            id: enquiry.id,
+            customer_name: enquiry.customerName,
+            phone_number: enquiry.phoneNumber,
+            location: enquiry.location,
+            product_id: enquiry.productId,
+            branch_id: enquiry.branchId,
+            purchase_intent: enquiry.purchaseIntent,
+            pipeline_stage: enquiry.pipelineStage,
+            created_by: enquiry.createdBy,
+            created_at: enquiry.createdAt,
+            closed_amount: enquiry.closedAmount
+        }]);
+
+        if (enqError) throw enqError;
+
+        if (enquiry.history && enquiry.history.length > 0) {
+            const historyData = enquiry.history.map(h => ({
+                enquiry_id: enquiry.id,
+                stage: h.stage,
+                timestamp: h.timestamp,
+                user_id: h.userId,
+                notes: h.notes
+            }));
+            const { error: histError } = await this.supabase.from('enquiry_history').insert(historyData);
+            if (histError) throw histError;
+        }
+    }
+
+    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number): Promise<void> {
+        const updates: any = { pipeline_stage: stage };
+        if (amount !== undefined) updates.closed_amount = amount;
+
+        const { error: enqError } = await this.supabase
+            .from('enquiries')
+            .update(updates)
+            .eq('id', id);
+
+        if (enqError) throw enqError;
+
+        const { error: histError } = await this.supabase.from('enquiry_history').insert([{
+            enquiry_id: id,
+            stage: stage,
+            timestamp: new Date().toISOString(),
+            user_id: userId,
+            notes: notes
+        }]);
+
+        if (histError) throw histError;
+    }
+
+    async deleteEnquiry(id: string): Promise<void> {
+        const { error } = await this.supabase.from('enquiries').delete().eq('id', id);
+        if (error) throw error;
     }
 
     private mapPromotion(data: any): Promotion {
@@ -100,6 +162,25 @@ export class SupabaseRepository implements IDataRepository {
             name: user.name,
             branch_id: user.branchId
         }]);
+        if (error) throw error;
+    }
+
+    async updateUser(user: User): Promise<void> {
+        const { error } = await this.supabase
+            .from('users')
+            .update({
+                username: user.username,
+                password: user.password,
+                role: user.role,
+                name: user.name,
+                branch_id: user.branchId
+            })
+            .eq('id', user.id);
+        if (error) throw error;
+    }
+
+    async deleteUser(id: string): Promise<void> {
+        const { error } = await this.supabase.from('users').delete().eq('id', id);
         if (error) throw error;
     }
 
@@ -296,52 +377,7 @@ export class SupabaseRepository implements IDataRepository {
         });
     }
 
-    async addEnquiry(enquiry: Enquiry): Promise<void> {
-        const { error: enqError } = await this.supabase.from('enquiries').insert([{
-            id: enquiry.id,
-            customer_name: enquiry.customerName,
-            phone_number: enquiry.phoneNumber,
-            location: enquiry.location,
-            product_id: enquiry.productId,
-            branch_id: enquiry.branchId,
-            purchase_intent: enquiry.purchaseIntent,
-            pipeline_stage: enquiry.pipelineStage,
-            created_by: enquiry.createdBy,
-            created_at: enquiry.createdAt
-        }]);
 
-        if (enqError) throw enqError;
-
-        if (enquiry.history && enquiry.history.length > 0) {
-            const historyData = enquiry.history.map(h => ({
-                enquiry_id: enquiry.id,
-                stage: h.stage,
-                timestamp: h.timestamp,
-                user_id: h.userId,
-                notes: h.notes
-            }));
-            const { error: histError } = await this.supabase.from('enquiry_history').insert(historyData);
-            if (histError) throw histError;
-        }
-    }
-
-    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string): Promise<void> {
-        const { error: enqError } = await this.supabase
-            .from('enquiries')
-            .update({ pipeline_stage: stage })
-            .eq('id', id);
-
-        if (enqError) throw enqError;
-
-        const { error: histError } = await this.supabase.from('enquiry_history').insert([{
-            enquiry_id: id,
-            stage: stage,
-            timestamp: new Date().toISOString(),
-            user_id: userId
-        }]);
-
-        if (histError) throw histError;
-    }
 
     // Promotion Operations
     async getPromotions(): Promise<Promotion[]> {
@@ -380,6 +416,16 @@ export class SupabaseRepository implements IDataRepository {
             .from('promotions')
             .delete()
             .eq('id', id);
+        if (error) throw error;
+    }
+
+    // Feedback Operations
+    async addFeedback(feedback: { userId: string; message: string; rating: number }): Promise<void> {
+        const { error } = await this.supabase.from('user_feedback').insert([{
+            user_id: feedback.userId,
+            feedback: feedback.message,
+            rating: feedback.rating
+        }]);
         if (error) throw error;
     }
 }

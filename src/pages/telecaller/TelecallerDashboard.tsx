@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Product, Branch, Enquiry } from '../../types';
-import { storage } from '../../services/storage';
+import { dataService } from '../../services/DataService';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../components/Toast';
@@ -20,7 +20,9 @@ const TelecallerDashboard: React.FC = () => {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [myEnquiries, setMyEnquiries] = useState<Enquiry[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
     const [metrics, setMetrics] = useState({ capturedToday: 0, qualifiedRate: 0, scheduledDemos: 0 });
+    const [loading, setLoading] = useState(true);
 
     // Form State
     const [customerName, setCustomerName] = useState('');
@@ -32,26 +34,46 @@ const TelecallerDashboard: React.FC = () => {
     const nameInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setBranches(storage.getBranches().filter(b => b.active));
-        loadMyEnquiries();
-    }, []);
+        loadData();
+    }, [user]);
 
-    const loadMyEnquiries = () => {
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [branchesData, productsData] = await Promise.all([
+                dataService.getBranches(),
+                dataService.getProducts()
+            ]);
+            setBranches(branchesData.filter(b => b.active));
+            setProducts(productsData);
+            await loadMyEnquiries();
+        } catch (error) {
+            console.error("Failed to load dashboard data", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadMyEnquiries = async () => {
         if (!user) return;
-        const all = storage.getEnquiries();
-        const mine = all.filter(e => e.createdBy === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setMyEnquiries(mine);
+        try {
+            const all = await dataService.getEnquiries();
+            const mine = all.filter(e => e.createdBy === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            setMyEnquiries(mine);
 
-        const today = new Date().toISOString().split('T')[0];
-        const todayLeads = mine.filter(e => e.createdAt.startsWith(today)).length;
-        const qualified = mine.filter(e => e.pipelineStage !== 'New').length;
-        const demos = mine.filter(e => e.pipelineStage.includes('Demo')).length;
+            const today = new Date().toISOString().split('T')[0];
+            const todayLeads = mine.filter(e => e.createdAt.startsWith(today)).length;
+            const qualified = mine.filter(e => e.pipelineStage !== 'New').length;
+            const demos = mine.filter(e => e.pipelineStage.includes('Demo')).length;
 
-        setMetrics({
-            capturedToday: todayLeads,
-            qualifiedRate: Math.round((qualified / (mine.length || 1)) * 100),
-            scheduledDemos: demos
-        });
+            setMetrics({
+                capturedToday: todayLeads,
+                qualifiedRate: Math.round((qualified / (mine.length || 1)) * 100),
+                scheduledDemos: demos
+            });
+        } catch (error) {
+            console.error("Failed to load enquiries", error);
+        }
     };
 
     const handleProductSelect = (product: Product) => {
@@ -59,7 +81,7 @@ const TelecallerDashboard: React.FC = () => {
         setTimeout(() => nameInputRef.current?.focus(), 0);
     };
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedProduct || !user) return;
 
@@ -68,28 +90,33 @@ const TelecallerDashboard: React.FC = () => {
             return;
         }
 
-        const existing = storage.getEnquiries().find(e => e.phoneNumber === phone && e.productId === selectedProduct.id && e.pipelineStage !== 'Closed-Not Interested');
-        if (existing) {
-            showToast(`Duplicate Enquiry! Phone already has an active lead for ${selectedProduct.name}.`, 'warning');
-            return;
+        try {
+            const allEnquiries = await dataService.getEnquiries();
+            const existing = allEnquiries.find(e => e.phoneNumber === phone && e.productId === selectedProduct.id && e.pipelineStage !== 'Closed-Not Interested');
+            if (existing) {
+                showToast(`Duplicate Enquiry! Phone already has an active lead for ${selectedProduct.name}.`, 'warning');
+                return;
+            }
+
+            const newEnquiry: Enquiry = {
+                id: 'e' + Date.now(),
+                customerName, phoneNumber: phone, location,
+                productId: selectedProduct.id,
+                branchId: branchId || branches[0]?.id || '',
+                purchaseIntent: intent as any,
+                pipelineStage: 'New',
+                createdBy: user.id,
+                createdAt: new Date().toISOString(),
+                history: [{ stage: 'New', timestamp: new Date().toISOString(), userId: user.id }]
+            };
+
+            await dataService.addEnquiry(newEnquiry);
+            setCustomerName(''); setPhone(''); setLocation(''); setBranchId(''); setSelectedProduct(null);
+            showToast(t('enquiries.captureSuccess'), 'success');
+            loadMyEnquiries();
+        } catch (error) {
+            console.error("Failed to save enquiry", error);
         }
-
-        const newEnquiry: Enquiry = {
-            id: 'e' + Date.now(),
-            customerName, phoneNumber: phone, location,
-            productId: selectedProduct.id,
-            branchId: branchId || branches[0]?.id || '',
-            purchaseIntent: intent as any,
-            pipelineStage: 'New',
-            createdBy: user.id,
-            createdAt: new Date().toISOString(),
-            history: [{ stage: 'New', timestamp: new Date().toISOString(), userId: user.id }]
-        };
-
-        storage.addEnquiry(newEnquiry);
-        setCustomerName(''); setPhone(''); setLocation(''); setBranchId(''); setSelectedProduct(null);
-        showToast(t('enquiries.captureSuccess'), 'success');
-        loadMyEnquiries();
     };
 
     const renderDashboard = () => (
@@ -185,7 +212,8 @@ const TelecallerDashboard: React.FC = () => {
                             <div key={e.id} style={{ padding: '1rem', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
                                     <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{e.customerName}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{storage.getProducts().find(p => p.id === e.productId)?.name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{products.find(p => p.id === e.productId)?.name || e.productId}</div>
+
                                 </div>
                                 <div style={{
                                     padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700,

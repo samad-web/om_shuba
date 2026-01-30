@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Branch } from '../../types';
-import { storage } from '../../services/storage';
+import { dataService } from '../../services/DataService';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
@@ -12,6 +12,7 @@ const BranchMaster: React.FC = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
+    const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState<Partial<Branch>>({
         name: '', location: '', contactNumber: '', active: true
     });
@@ -20,13 +21,21 @@ const BranchMaster: React.FC = () => {
         loadBranches();
     }, []);
 
-    const loadBranches = () => {
-        const allBranches = storage.getBranches();
-        // Branch admin can only see their own branch
-        if (user?.role === 'branch_admin' && user.branchId) {
-            setBranches(allBranches.filter(b => b.id === user.branchId));
-        } else {
-            setBranches(allBranches);
+    const loadBranches = async () => {
+        setLoading(true);
+        try {
+            const allBranches = await dataService.getBranches();
+            // Branch admin can only see their own branch
+            if (user?.role === 'branch_admin' && user.branchId) {
+                setBranches(allBranches.filter(b => b.id === user.branchId));
+            } else {
+                setBranches(allBranches);
+            }
+        } catch (error) {
+            console.error("Failed to load branches", error);
+            showToast('Failed to load branches', 'error');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -41,44 +50,50 @@ const BranchMaster: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingBranch) {
-            // Update existing branch
-            const all = storage.getBranches();
-            const updated = all.map(b => b.id === editingBranch.id ? { ...editingBranch, ...formData } as Branch : b);
-            localStorage.setItem('tc_branches', JSON.stringify(updated));
-            showToast('Branch updated successfully', 'success');
-        } else {
-            // Add new branch
-            const newBranchId = 'b' + Date.now();
-            const newBranch = { ...formData, id: newBranchId } as Branch;
-            storage.addBranch(newBranch);
+        try {
+            if (editingBranch) {
+                // Update existing branch
+                await dataService.updateBranch({ ...editingBranch, ...formData } as Branch);
+                showToast('Branch updated successfully', 'success');
+            } else {
+                // Add new branch
+                const newBranchId = 'b' + Date.now();
+                const newBranch = { ...formData, id: newBranchId } as Branch;
+                await dataService.addBranch(newBranch);
 
-            // Automatically create branch admin account
-            const branchNameSlug = formData.name?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || 'branch';
-            const newBranchAdmin = {
-                id: 'u' + Date.now(),
-                username: `admin_${branchNameSlug}`,
-                password: 'password', // Default password
-                role: 'branch_admin' as const,
-                name: `${formData.name} Admin`,
-                branchId: newBranchId
-            };
-            storage.addUser(newBranchAdmin);
+                // Automatically create branch admin account
+                const branchNameSlug = formData.name?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || 'branch';
+                const newBranchAdmin = {
+                    id: 'u' + Date.now(),
+                    username: `admin_${branchNameSlug}`,
+                    password: 'password', // Default password
+                    role: 'branch_admin' as const,
+                    name: `${formData.name} Admin`,
+                    branchId: newBranchId
+                };
+                await dataService.addUser(newBranchAdmin);
 
-            showToast(`Branch created! Username: ${newBranchAdmin.username}, Password: password`, 'success');
+                showToast(`Branch created! Username: ${newBranchAdmin.username}, Password: password`, 'success');
+            }
+            setIsModalOpen(false);
+            loadBranches();
+        } catch (error) {
+            console.error("Failed to save branch", error);
+            showToast('Failed to save branch', 'error');
         }
-        setIsModalOpen(false);
-        loadBranches();
     };
 
-    const toggleStatus = (branch: Branch) => {
-        const all = storage.getBranches();
-        const updated = all.map(b => b.id === branch.id ? { ...b, active: !b.active } : b);
-        localStorage.setItem('tc_branches', JSON.stringify(updated));
-        loadBranches();
-        showToast(`Branch ${!branch.active ? 'enabled' : 'disabled'} successfully`, 'success');
+    const toggleStatus = async (branch: Branch) => {
+        try {
+            await dataService.updateBranch({ ...branch, active: !branch.active });
+            loadBranches();
+            showToast(`Branch ${!branch.active ? 'enabled' : 'disabled'} successfully`, 'success');
+        } catch (error) {
+            console.error("Failed to update status", error);
+            showToast('Failed to update status', 'error');
+        }
     };
 
     const deleteBranch = async (branch: Branch) => {
@@ -91,11 +106,18 @@ const BranchMaster: React.FC = () => {
         });
 
         if (confirmed) {
-            storage.deleteBranch(branch.id);
-            loadBranches();
-            showToast('Branch deleted successfully', 'success');
+            try {
+                await dataService.deleteBranch(branch.id);
+                loadBranches();
+                showToast('Branch deleted successfully', 'success');
+            } catch (error) {
+                console.error("Failed to delete branch", error);
+                showToast('Failed to delete branch', 'error');
+            }
         }
     };
+
+    if (loading) return <div>Loading branches...</div>;
 
     return (
         <div>

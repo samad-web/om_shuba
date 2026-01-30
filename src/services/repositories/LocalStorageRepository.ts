@@ -78,6 +78,18 @@ export class LocalStorageRepository implements IDataRepository {
         localStorage.setItem(KEYS.USERS, JSON.stringify(users));
     }
 
+    async updateUser(user: User): Promise<void> {
+        const users = await this.getUsers();
+        const updated = users.map(u => u.id === user.id ? user : u);
+        localStorage.setItem(KEYS.USERS, JSON.stringify(updated));
+    }
+
+    async deleteUser(id: string): Promise<void> {
+        const users = await this.getUsers();
+        const filtered = users.filter(u => u.id !== id);
+        localStorage.setItem(KEYS.USERS, JSON.stringify(filtered));
+    }
+
     async login(username: string, password: string): Promise<User | null> {
         const users = await this.getUsers();
         return users.find(u => u.username === username && u.password === password) || null;
@@ -164,19 +176,26 @@ export class LocalStorageRepository implements IDataRepository {
         localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(enquiries));
     }
 
-    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string): Promise<void> {
+    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number): Promise<void> {
         const enquiries = await this.getEnquiries();
         const updated = enquiries.map(e => {
             if (e.id === id) {
                 return {
                     ...e,
                     pipelineStage: stage,
-                    history: [...e.history, { stage, timestamp: new Date().toISOString(), userId }]
+                    closedAmount: amount !== undefined ? amount : e.closedAmount,
+                    history: [...e.history, { stage, timestamp: new Date().toISOString(), userId, notes }]
                 };
             }
             return e;
         });
         localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(updated));
+    }
+
+    async deleteEnquiry(id: string): Promise<void> {
+        const enquiries = await this.getEnquiries();
+        const filtered = enquiries.filter(e => e.id !== id);
+        localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(filtered));
     }
 
     // Promotion Operations
@@ -200,5 +219,15 @@ export class LocalStorageRepository implements IDataRepository {
         const promotions = await this.getPromotions();
         const filtered = promotions.filter(p => p.id !== id);
         localStorage.setItem(KEYS.PROMOTIONS, JSON.stringify(filtered));
+    }
+
+    // Feedback Operations
+    async addFeedback(feedback: { userId: string; message: string; rating: number }): Promise<void> {
+        // For LocalStorage, we'll just log it or store in a separate key if we really wanted to,
+        // but since this is a transition to Supabase, we can just log or check if a key exists.
+        // Let's create a key for it to be consistent.
+        const feedbacks = JSON.parse(localStorage.getItem('tc_feedback') || '[]');
+        feedbacks.push({ ...feedback, id: Date.now(), createdAt: new Date().toISOString() });
+        localStorage.setItem('tc_feedback', JSON.stringify(feedbacks));
     }
 }

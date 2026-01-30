@@ -30,7 +30,9 @@ export const storage = {
         if (isSupabaseEnabled) {
             console.warn('Sync storage.getUsers() called while Supabase is enabled. This will return stale LocalStorage data.');
         }
-        return JSON.parse(localStorage.getItem('tc_users') || '[]');
+        try {
+            return JSON.parse(localStorage.getItem('tc_users') || '[]');
+        } catch { return []; }
     },
 
     // Product Operations
@@ -38,17 +40,23 @@ export const storage = {
         if (isSupabaseEnabled) {
             console.warn('Sync storage.getProducts() called while Supabase is enabled.');
         }
-        return JSON.parse(localStorage.getItem('tc_products') || '[]');
+        try {
+            return JSON.parse(localStorage.getItem('tc_products') || '[]');
+        } catch { return []; }
     },
 
     // Branch Operations
     getBranches: () => {
-        return JSON.parse(localStorage.getItem('tc_branches') || '[]');
+        try {
+            return JSON.parse(localStorage.getItem('tc_branches') || '[]');
+        } catch { return []; }
     },
 
     // Enquiry Operations  
     getEnquiries: () => {
-        return JSON.parse(localStorage.getItem('tc_enquiries') || '[]');
+        try {
+            return JSON.parse(localStorage.getItem('tc_enquiries') || '[]');
+        } catch { return []; }
     },
 
     // Legacy methods
@@ -60,7 +68,9 @@ export const storage = {
     addEnquiry: (enquiry: any) => repository.addEnquiry(enquiry),
     updateEnquiryStage: (id: string, stage: any, userId: string) => repository.updateEnquiryStage(id, stage, userId),
     getPromotions: () => {
-        return JSON.parse(localStorage.getItem('tc_promotions') || '[]');
+        try {
+            return JSON.parse(localStorage.getItem('tc_promotions') || '[]');
+        } catch { return []; }
     },
     addPromotion: (promotion: any) => repository.addPromotion(promotion),
     updatePromotion: (promotion: any) => repository.updatePromotion(promotion),
@@ -68,6 +78,8 @@ export const storage = {
     login: (username: string, password: string) => {
         // This is problematic as it's sync. For migration, we keep it reading from localStorage
         // but the actual login check should be async via dataService.login
-        return JSON.parse(localStorage.getItem('tc_users') || '[]').find((u: any) => u.username === username && u.password === password);
+        try {
+            return JSON.parse(localStorage.getItem('tc_users') || '[]').find((u: any) => u.username === username && u.password === password);
+        } catch { return null; }
     }
 };

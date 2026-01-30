@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Enquiry, PipelineStage, Branch } from '../../types';
-import { storage } from '../../services/storage';
+import { dataService } from '../../services/DataService';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
@@ -14,34 +14,60 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
     const { user } = useAuth();
     const { confirm } = useConfirm();
     const { showToast } = useToast();
+    const [loading, setLoading] = useState(true);
 
     // Filters
     const [filterStage, setFilterStage] = useState<string>('');
     const [filterBranch, setFilterBranch] = useState<string>('');
     const [branches, setBranches] = useState<Branch[]>([]);
+    const [products, setProducts] = useState<any[]>([]); // To resolve product names
 
     useEffect(() => {
         loadData();
     }, []);
 
-    const loadData = () => {
-        setEnquiries(storage.getEnquiries());
-        setBranches(storage.getBranches());
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [enquiriesData, branchesData, productsData] = await Promise.all([
+                dataService.getEnquiries(),
+                dataService.getBranches(),
+                dataService.getProducts()
+            ]);
+            setEnquiries(enquiriesData);
+            setBranches(branchesData);
+            setProducts(productsData);
+        } catch (error) {
+            console.error("Failed to load data", error);
+            showToast('Failed to load data', 'error');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleStageChange = async (id: string, newStage: PipelineStage) => {
         if (!user) return;
 
         let amount: number | undefined = undefined;
+        let notes: string | undefined = undefined; // Asking for notes on change? Maybe not in this UI.
+
         if (newStage === 'Closed-Converted') {
             const input = window.prompt("Enter Final Sale Amount (₹):");
             if (input === null) return; // User cancelled
             amount = parseFloat(input) || 0;
+            // Maybe ask for notes too?
+            const notesInput = window.prompt("Optional notes:");
+            if (notesInput) notes = notesInput;
         }
 
-        storage.updateEnquiryStage(id, newStage, user.id, undefined, amount);
-        loadData(); // Reload to see changes
-        showToast('Stage updated successfully', 'success');
+        try {
+            await dataService.updateEnquiryStage(id, newStage, user.id, notes, amount);
+            showToast('Stage updated successfully', 'success');
+            loadData(); // Reload to see changes
+        } catch (error) {
+            console.error("Failed to update stage", error);
+            showToast('Failed to update stage', 'error');
+        }
     };
 
     const handleDelete = async (id: string, name: string) => {
@@ -54,9 +80,14 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
         });
 
         if (confirmed) {
-            storage.deleteEnquiry(id);
-            loadData();
-            showToast('Lead deleted successfully', 'success');
+            try {
+                await dataService.deleteEnquiry(id);
+                showToast('Lead deleted successfully', 'success');
+                loadData();
+            } catch (error) {
+                console.error("Failed to delete enquiry", error);
+                showToast('Failed to delete lead', 'error');
+            }
         }
     };
 
@@ -73,6 +104,8 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
         if (filterBranch && e.branchId !== filterBranch) return false;
         return true;
     });
+
+    if (loading) return <div>Loading data...</div>;
 
     return (
         <div>
@@ -126,7 +159,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role }) => {
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{e.phoneNumber}</div>
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
-                                    {storage.getProducts().find(p => p.id === e.productId)?.name || e.productId}
+                                    {products.find(p => p.id === e.productId)?.name || e.productId}
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
                                     {branches.find(b => b.id === e.branchId)?.name || 'N/A'}

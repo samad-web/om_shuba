@@ -7,7 +7,7 @@ import EnquiryLog from './EnquiryLog';
 import ConversionOverview from './ConversionOverview';
 import PromotionManagement from '../../components/PromotionManagement';
 import { useAuth } from '../../context/AuthContext';
-import { storage } from '../../services/storage';
+import { dataService } from '../../services/DataService';
 import { useSettings } from '../../context/SettingsContext';
 
 const AdminDashboard: React.FC = () => {
@@ -15,29 +15,39 @@ const AdminDashboard: React.FC = () => {
     const { t } = useSettings();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [metrics, setMetrics] = useState({ branchLeads: 0, demosDone: 0, activeProducts: 0 });
+    const [loading, setLoading] = useState(true);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     useEffect(() => {
         calculateMetrics();
-    }, []);
+    }, [user]);
 
-    const calculateMetrics = () => {
-        const enquiries = storage.getEnquiries();
-        const products = storage.getProducts();
+    const calculateMetrics = async () => {
+        setLoading(true);
+        try {
+            const [enquiries, products] = await Promise.all([
+                dataService.getEnquiries(),
+                dataService.getProducts()
+            ]);
 
-        const branchLeads = user?.role === 'branch_admin'
-            ? enquiries.filter(e => e.branchId === user.branchId).length
-            : enquiries.length;
+            const branchLeads = user?.role === 'branch_admin'
+                ? enquiries.filter(e => e.branchId === user.branchId).length
+                : enquiries.length;
 
-        const demos = user?.role === 'branch_admin'
-            ? enquiries.filter(e => e.branchId === user.branchId && e.pipelineStage === 'Demo/Visit Done').length
-            : enquiries.filter(e => e.pipelineStage === 'Demo/Visit Done').length;
+            const demos = user?.role === 'branch_admin'
+                ? enquiries.filter(e => e.branchId === user.branchId && e.pipelineStage === 'Demo/Visit Done').length
+                : enquiries.filter(e => e.pipelineStage === 'Demo/Visit Done').length;
 
-        setMetrics({
-            branchLeads,
-            demosDone: demos,
-            activeProducts: products.filter(p => p.active).length
-        });
+            setMetrics({
+                branchLeads,
+                demosDone: demos,
+                activeProducts: products.filter(p => p.active).length
+            });
+        } catch (error) {
+            console.error("Failed to load admin metrics", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const renderDashboard = () => (

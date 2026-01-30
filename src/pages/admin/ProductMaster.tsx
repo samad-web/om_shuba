@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Product } from '../../types';
-import { storage } from '../../services/storage';
+import { dataService } from '../../services/DataService';
 import { downloadProductTemplate, parseProductExcel, type BulkUploadResult } from '../../services/excelService';
 
 const ProductMaster: React.FC = () => {
@@ -11,6 +11,7 @@ const ProductMaster: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // Form State
     const [formData, setFormData] = useState<Partial<Product>>({
@@ -21,8 +22,16 @@ const ProductMaster: React.FC = () => {
         loadProducts();
     }, []);
 
-    const loadProducts = () => {
-        setProducts(storage.getProducts());
+    const loadProducts = async () => {
+        setLoading(true);
+        try {
+            const data = await dataService.getProducts();
+            setProducts(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const filteredProducts = products.filter(p =>
@@ -42,20 +51,29 @@ const ProductMaster: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingProduct) {
-            storage.updateProduct({ ...editingProduct, ...formData } as Product);
-        } else {
-            storage.addProduct({ ...formData, id: 'p' + Date.now() } as Product);
+        try {
+            if (editingProduct) {
+                await dataService.updateProduct({ ...editingProduct, ...formData } as Product);
+            } else {
+                await dataService.addProduct({ ...formData, id: 'p' + Date.now() } as Product);
+            }
+            setIsModalOpen(false);
+            loadProducts();
+        } catch (error) {
+            console.error("Failed to save product", error);
+            alert("Failed to save product");
         }
-        setIsModalOpen(false);
-        loadProducts();
     };
 
-    const toggleStatus = (product: Product) => {
-        storage.updateProduct({ ...product, active: !product.active });
-        loadProducts();
+    const toggleStatus = async (product: Product) => {
+        try {
+            await dataService.updateProduct({ ...product, active: !product.active });
+            loadProducts();
+        } catch (error) {
+            console.error("Failed to toggle status", error);
+        }
     };
 
     const handleDownloadTemplate = () => {
@@ -82,10 +100,23 @@ const ProductMaster: React.FC = () => {
     const handleConfirmUpload = () => {
         if (!uploadResult) return;
 
-        storage.bulkUpdateProducts(uploadResult.productsToCreate, uploadResult.productsToUpdate);
-        loadProducts();
-        setShowConfirmDialog(false);
-        setUploadResult(null);
+        // Note: bulkUpdateProducts is not in IDataRepository yet.
+        // For now, we'll iterate. Ideally, we should add a bulk method to the repo.
+        // Assuming storage.bulkUpdateProducts logic:
+
+        const promises = [
+            ...uploadResult.productsToCreate.map(p => dataService.addProduct({ ...p, id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5) } as Product)),
+            ...uploadResult.productsToUpdate.map(p => dataService.updateProduct(p))
+        ];
+
+        Promise.all(promises).then(() => {
+            loadProducts();
+            setShowConfirmDialog(false);
+            setUploadResult(null);
+        }).catch(err => {
+            console.error("Bulk update failed", err);
+            alert("Some items failed to upload");
+        });
     };
 
     const handleCancelUpload = () => {
@@ -102,6 +133,8 @@ const ProductMaster: React.FC = () => {
     }, {} as Record<string, Product[]>);
 
     const categories = Object.keys(groupedProducts).sort();
+
+    if (loading) return <div>Loading products...</div>;
 
     return (
         <div>

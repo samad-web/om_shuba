@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, UserRole, Branch } from '../../types';
-import { storage } from '../../services/storage';
+import { dataService } from '../../services/DataService';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 
@@ -11,6 +11,7 @@ const UserManagement: React.FC = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [isAdding, setIsAdding] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
     // Form state
     const [username, setUsername] = useState('');
@@ -23,33 +24,51 @@ const UserManagement: React.FC = () => {
         loadData();
     }, []);
 
-    const loadData = () => {
-        setUsers(storage.getUsers());
-        setBranches(storage.getBranches());
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [usersData, branchesData] = await Promise.all([
+                dataService.getUsers(),
+                dataService.getBranches()
+            ]);
+            setUsers(usersData);
+            setBranches(branchesData);
+        } catch (error) {
+            console.error("Failed to load data", error);
+            showToast('Failed to load data', 'error');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        try {
+            if (editingUser) {
+                const updated: User = { ...editingUser, username, name, role, branchId: role === 'admin' ? undefined : branchId };
+                // If password is provided, update it
+                if (password) updated.password = password;
+                await dataService.updateUser(updated);
+                showToast('User updated successfully', 'success');
+            } else {
+                const newUser: User = {
+                    id: 'u' + Date.now(),
+                    username,
+                    password,
+                    name,
+                    role,
+                    branchId: role === 'admin' ? undefined : branchId
+                };
+                await dataService.addUser(newUser);
+                showToast('User created successfully', 'success');
+            }
 
-        if (editingUser) {
-            const updated: User = { ...editingUser, username, name, role, branchId: role === 'admin' ? undefined : branchId };
-            // If password is provided, update it
-            if (password) updated.password = password;
-            storage.updateUser(updated);
-        } else {
-            const newUser: User = {
-                id: 'u' + Date.now(),
-                username,
-                password,
-                name,
-                role,
-                branchId: role === 'admin' ? undefined : branchId
-            };
-            storage.addUser(newUser);
+            resetForm();
+            loadData();
+        } catch (error) {
+            console.error("Failed to save user", error);
+            showToast('Failed to save user', 'error');
         }
-
-        resetForm();
-        loadData();
     };
 
     const resetForm = () => {
@@ -82,11 +101,18 @@ const UserManagement: React.FC = () => {
         });
 
         if (confirmed) {
-            storage.deleteUser(id);
-            loadData();
-            showToast('User deleted successfully', 'success');
+            try {
+                await dataService.deleteUser(id);
+                loadData();
+                showToast('User deleted successfully', 'success');
+            } catch (error) {
+                console.error("Failed to delete user", error);
+                showToast('Failed to delete user', 'error');
+            }
         }
     };
+
+    if (loading) return <div>Loading users...</div>;
 
     return (
         <div>

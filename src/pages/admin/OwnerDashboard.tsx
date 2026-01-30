@@ -9,14 +9,19 @@ import ConversionOverview from './ConversionOverview';
 import UserManagement from './UserManagement';
 import AccountSettings from './AccountSettings';
 import PromotionManagement from '../../components/PromotionManagement';
-import { storage } from '../../services/storage';
+import { dataService } from '../../services/DataService';
+import { migrationService } from '../../services/MigrationService';
 import { downloadBusinessReport } from '../../services/excelService';
 import { useSettings } from '../../context/SettingsContext';
+import { useToast } from '../../components/Toast';
 
 const OwnerDashboard: React.FC = () => {
     const { t } = useSettings();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [hasLocalData, setHasLocalData] = useState(false);
     const [metrics, setMetrics] = useState({
         activePipeline: 0,
         conversionRate: 0,
@@ -29,83 +34,124 @@ const OwnerDashboard: React.FC = () => {
         totalRevenue: 0
     });
 
+    // Data for export
+    const [exportData, setExportData] = useState<{ enquiries: any[], products: any[], branches: any[] } | null>(null);
+
     useEffect(() => {
         calculateMetrics();
+        setHasLocalData(migrationService.hasLocalData());
     }, []);
 
-    const handleExport = () => {
-        const enquiries = storage.getEnquiries();
-        const products = storage.getProducts();
-        const branches = storage.getBranches();
-        downloadBusinessReport(enquiries, products, branches);
+    const { showToast } = useToast();
+
+    const handleSync = async () => {
+        if (!window.confirm("This will upload all local data to Supabase. Records with duplicate IDs will be skipped. Progress?")) return;
+
+        setIsSyncing(true);
+        try {
+            const results = await migrationService.migrateAll();
+            setHasLocalData(migrationService.hasLocalData());
+            showToast(`Sync complete! Migrated: ${results.branches} branches, ${results.products} products, ${results.enquiries} enquiries.`, 'success');
+            calculateMetrics();
+        } catch (error) {
+            console.error("Sync failed", error);
+            showToast("Sync failed. Check console for details.", 'error');
+        } finally {
+            setIsSyncing(false);
+        }
     };
 
-    const calculateMetrics = () => {
-        const enquiries = storage.getEnquiries();
-        const products = storage.getProducts();
-        const branches = storage.getBranches();
+    const handleExport = async () => {
+        if (exportData) {
+            downloadBusinessReport(exportData.enquiries, exportData.products, exportData.branches);
+        } else {
+            // Fallback if data not yet loaded or if we want to ensure fresh data
+            const [enquiries, products, branches] = await Promise.all([
+                dataService.getEnquiries(),
+                dataService.getProducts(),
+                dataService.getBranches()
+            ]);
+            downloadBusinessReport(enquiries, products, branches);
+        }
+    };
 
-        // 1. Total Active Pipeline (Excluding delivered/closed)
-        const active = enquiries.filter(e => !['Delivered', 'Closed-Not Interested', 'Closed-Converted'].includes(e.pipelineStage));
+    const calculateMetrics = async () => {
+        setLoading(true);
+        try {
+            const [enquiries, products, branches] = await Promise.all([
+                dataService.getEnquiries(),
+                dataService.getProducts(),
+                dataService.getBranches()
+            ]);
 
-        // 2. Conversion Rate (Converted / Total ever)
-        const converted = enquiries.filter(e => e.pipelineStage === 'Closed-Converted').length;
-        const total = enquiries.length || 1;
-        const convRate = Math.round((converted / total) * 100);
+            setExportData({ enquiries, products, branches });
 
-        // 3. Demo Fulfillment (% of scheduled demos that are 'Done')
-        const scheduled = enquiries.filter(e => ['Demo Scheduled', 'Visit Scheduled', 'Demo/Visit Done'].includes(e.pipelineStage)).length;
-        const done = enquiries.filter(e => e.pipelineStage === 'Demo/Visit Done').length;
-        const fulfillment = scheduled > 0 ? Math.round((done / scheduled) * 100) : 100;
+            // 1. Total Active Pipeline (Excluding delivered/closed)
+            const active = enquiries.filter(e => !['Delivered', 'Closed-Not Interested', 'Closed-Converted'].includes(e.pipelineStage));
 
-        // 4. Action Urgency (Scheduled for TODAY)
-        const todayStr = new Date().toLocaleDateString();
-        const urgent = enquiries.filter(e =>
-            e.tracking?.status === 'Scheduled' &&
-            new Date(e.tracking.scheduledDate).toLocaleDateString() === todayStr
-        ).length;
+            // 2. Conversion Rate (Converted / Total ever)
+            const converted = enquiries.filter(e => e.pipelineStage === 'Closed-Converted').length;
+            const total = enquiries.length || 1;
+            const convRate = Math.round((converted / total) * 100);
 
-        // 5. Lead Quality (% Qualified vs Total)
-        const qualified = enquiries.filter(e => !['New'].includes(e.pipelineStage)).length;
-        const qualityIndex = Math.round((qualified / total) * 100);
+            // 3. Demo Fulfillment (% of scheduled demos that are 'Done')
+            const scheduled = enquiries.filter(e => ['Demo Scheduled', 'Visit Scheduled', 'Demo/Visit Done'].includes(e.pipelineStage)).length;
+            const done = enquiries.filter(e => e.pipelineStage === 'Demo/Visit Done').length;
+            const fulfillment = scheduled > 0 ? Math.round((done / scheduled) * 100) : 100;
 
-        // 6. Total Realized Revenue
-        const totalRev = enquiries
-            .filter(e => e.pipelineStage === 'Closed-Converted')
-            .reduce((sum, e) => sum + (e.closedAmount || 0), 0);
+            // 4. Action Urgency (Scheduled for TODAY)
+            const todayStr = new Date().toLocaleDateString();
+            const urgent = enquiries.filter(e =>
+                e.tracking?.status === 'Scheduled' &&
+                new Date(e.tracking.scheduledDate).toLocaleDateString() === todayStr
+            ).length;
 
-        // Top Sellers Logic
-        const salesMap: Record<string, number> = {};
-        enquiries.filter(e => e.pipelineStage === 'Closed-Converted').forEach(e => {
-            const p = products.find(prod => prod.id === e.productId);
-            if (p) salesMap[p.name] = (salesMap[p.name] || 0) + 1;
-        });
+            // 5. Lead Quality (% Qualified vs Total)
+            const qualified = enquiries.filter(e => !['New'].includes(e.pipelineStage)).length;
+            const qualityIndex = Math.round((qualified / total) * 100);
 
-        const topSellersEntries = Object.entries(salesMap).sort((a, b) => b[1] - a[1]).slice(0, 4);
-        const maxSales = topSellersEntries[0]?.[1] || 1;
-        const topSellers = topSellersEntries.map(([name, count]) => ({
-            name,
-            count,
-            percent: Math.round((count / maxSales) * 100)
-        }));
+            // 6. Total Realized Revenue
+            const totalRev = enquiries
+                .filter(e => e.pipelineStage === 'Closed-Converted')
+                .reduce((sum, e) => sum + (e.closedAmount || 0), 0);
 
-        // 7. Branch Density (Enquiries per branch)
-        const branchCounts: Record<string, number> = {};
-        enquiries.forEach(e => { branchCounts[e.branchId] = (branchCounts[e.branchId] || 0) + 1; });
-        const topBranchEntry = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0];
-        const topBranchName = branches.find(b => b.id === (topBranchEntry?.[0]))?.name || 'Main Office';
+            // Top Sellers Logic
+            const salesMap: Record<string, number> = {};
+            enquiries.filter(e => e.pipelineStage === 'Closed-Converted').forEach(e => {
+                const p = products.find(prod => prod.id === e.productId);
+                if (p) salesMap[p.name] = (salesMap[p.name] || 0) + 1;
+            });
 
-        setMetrics({
-            activePipeline: active.length,
-            conversionRate: convRate,
-            demoFulfillment: fulfillment,
-            estPipelineValue: active.length * 68000,
-            topSellers,
-            branchDensity: { name: topBranchName, count: topBranchEntry?.[1] || 0 },
-            leadQuality: qualityIndex,
-            urgentActions: urgent || 5,
-            totalRevenue: totalRev
-        });
+            const topSellersEntries = Object.entries(salesMap).sort((a, b) => b[1] - a[1]).slice(0, 4);
+            const maxSales = topSellersEntries[0]?.[1] || 1;
+            const topSellers = topSellersEntries.map(([name, count]) => ({
+                name,
+                count,
+                percent: Math.round((count / maxSales) * 100)
+            }));
+
+            // 7. Branch Density (Enquiries per branch)
+            const branchCounts: Record<string, number> = {};
+            enquiries.forEach(e => { branchCounts[e.branchId] = (branchCounts[e.branchId] || 0) + 1; });
+            const topBranchEntry = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0];
+            const topBranchName = branches.find(b => b.id === (topBranchEntry?.[0]))?.name || 'Main Office';
+
+            setMetrics({
+                activePipeline: active.length,
+                conversionRate: convRate,
+                demoFulfillment: fulfillment,
+                estPipelineValue: active.length * 68000,
+                topSellers,
+                branchDensity: { name: topBranchName, count: topBranchEntry?.[1] || 0 },
+                leadQuality: qualityIndex,
+                urgentActions: urgent || 5,
+                totalRevenue: totalRev
+            });
+        } catch (error) {
+            console.error("Failed to load owner dashboard data", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const renderContent = () => {
@@ -134,6 +180,21 @@ const OwnerDashboard: React.FC = () => {
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Business health and operations monitoring</p>
                             </div>
                             <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                {hasLocalData && (
+                                    <button
+                                        className="btn"
+                                        onClick={handleSync}
+                                        disabled={isSyncing}
+                                        style={{
+                                            background: 'rgba(22, 163, 74, 0.1)',
+                                            color: '#16a34a',
+                                            borderColor: '#16a34a',
+                                            fontWeight: 700
+                                        }}
+                                    >
+                                        {isSyncing ? '⏳ Syncing...' : '☁️ Sync Legacy Data'}
+                                    </button>
+                                )}
                                 <button className="btn" onClick={() => calculateMetrics()}>🔄 {t('common.refresh')}</button>
                                 <button className="btn btn-primary" onClick={handleExport} style={{ borderRadius: '12px', padding: '0.75rem 1.5rem' }}>{t('owner.exportData')}</button>
                             </div>

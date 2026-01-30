@@ -14,13 +14,10 @@ const Login: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        const success = await login(username, password);
-        if (success) {
-            const userStr = localStorage.getItem('tc_users');
-            const users = userStr ? JSON.parse(userStr) : [];
-            const u = users.find((u: any) => u.username === username);
-            if (u.role === 'admin') navigate('/owner');
-            else if (u.role === 'branch_admin') navigate('/admin');
+        const user = await login(username, password);
+        if (user) {
+            if (user.role === 'admin') navigate('/owner');
+            else if (user.role === 'branch_admin') navigate('/admin');
             else navigate('/telecaller');
         } else {
             setError(t('login.error'));

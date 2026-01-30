@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { storage } from '../../services/storage';
+import { dataService } from '../../services/DataService';
 
 const AccountSettings: React.FC = () => {
     const { user } = useAuth();
@@ -8,7 +8,7 @@ const AccountSettings: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [msg, setMsg] = useState({ type: '', text: '' });
 
-    const handlePasswordChange = (e: React.FormEvent) => {
+    const handlePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!user) return;
@@ -22,10 +22,15 @@ const AccountSettings: React.FC = () => {
             return;
         }
 
-        storage.changeUserPassword(user.id, newPassword);
-        setNewPassword('');
-        setConfirmPassword('');
-        setMsg({ type: 'success', text: 'Password updated successfully! ✨' });
+        try {
+            await dataService.updateUser({ ...user, password: newPassword });
+            setNewPassword('');
+            setConfirmPassword('');
+            setMsg({ type: 'success', text: 'Password updated successfully! ✨' });
+        } catch (error) {
+            console.error("Failed to update password", error);
+            setMsg({ type: 'error', text: 'Failed to update password.' });
+        }
 
         setTimeout(() => setMsg({ type: '', text: '' }), 3000);
     };
