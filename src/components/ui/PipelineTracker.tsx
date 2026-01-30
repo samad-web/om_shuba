@@ -50,23 +50,21 @@ const PipelineTracker: React.FC<PipelineTrackerProps> = ({ currentStage, classNa
     const isLost = currentStage === 'Closed-Not Interested';
 
     return (
-        <div className={`w-full ${className}`} style={{ padding: '1.5rem 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
-                {/* Progress Bar Background */}
+        <div className={`w-full ${className}`} style={{ padding: '2rem 0' }}>
+            {/* Desktop Stepper */}
+            <div className="hidden-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
                 <div style={{
-                    position: 'absolute', top: '14px', left: '0', right: '0', height: '4px',
-                    background: '#e2e8f0', zIndex: 0, borderRadius: '4px'
+                    position: 'absolute', top: '16px', left: '0', right: '0', height: '2px',
+                    background: 'var(--border)', zIndex: 0
                 }} />
 
-                {/* Active Progress Bar */}
                 <div style={{
-                    position: 'absolute', top: '14px', left: '0',
+                    position: 'absolute', top: '16px', left: '0',
                     width: `${(currentStepIndex / (steps.length - 1)) * 100}%`,
-                    height: '4px',
-                    background: isLost ? '#ef4444' : '#10b981',
+                    height: '2px',
+                    background: isLost ? 'var(--danger)' : 'var(--primary)',
                     zIndex: 0,
-                    borderRadius: '4px',
-                    transition: 'width 0.5s ease-in-out'
+                    transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
                 }} />
 
                 {steps.map((step, index) => {
@@ -74,27 +72,29 @@ const PipelineTracker: React.FC<PipelineTrackerProps> = ({ currentStage, classNa
                     const isCurrent = index === currentStepIndex;
 
                     return (
-                        <div key={step.id} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div key={step.id} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
                             <div style={{
                                 width: '32px', height: '32px', borderRadius: '50%',
                                 background: isCurrent
-                                    ? (isLost ? '#ef4444' : '#10b981')
-                                    : (isCompleted ? '#10b981' : '#f8fafc'),
-                                border: `3px solid ${isCurrent || isCompleted ? (isLost && isCurrent ? '#fca5a5' : '#d1fae5') : '#e2e8f0'}`,
+                                    ? (isLost ? 'var(--danger)' : 'var(--primary)')
+                                    : (isCompleted ? (isLost ? 'var(--danger)' : 'var(--primary)') : 'var(--bg-card)'),
+                                border: `2px solid ${isCurrent || isCompleted ? (isLost ? 'var(--danger)' : 'var(--primary)') : 'var(--border)'}`,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: isCompleted || isCurrent ? 'white' : '#94a3b8',
-                                fontWeight: 'bold',
-                                fontSize: '0.8rem',
-                                transition: 'all 0.3s ease',
-                                boxShadow: isCurrent ? '0 0 0 4px rgba(16, 185, 129, 0.2)' : 'none'
+                                color: isCompleted || isCurrent ? 'white' : 'var(--text-muted)',
+                                fontWeight: '700',
+                                fontSize: '0.75rem',
+                                transition: 'all 0.4s ease',
+                                boxShadow: isCurrent ? `0 0 0 4px ${isLost ? 'rgba(239, 68, 68, 0.2)' : 'var(--primary-glow)'}` : 'none'
                             }}>
-                                {index + 1}
+                                {isCompleted && !isCurrent ? '✓' : index + 1}
                             </div>
                             <div style={{
-                                marginTop: '0.5rem',
+                                marginTop: 'var(--space-3)',
                                 fontSize: '0.75rem',
-                                fontWeight: isCurrent ? 600 : 500,
-                                color: isCurrent ? (isLost ? '#ef4444' : '#059669') : (isCompleted ? '#334155' : '#94a3b8')
+                                fontWeight: 700,
+                                textAlign: 'center',
+                                color: isCurrent ? (isLost ? 'var(--danger)' : 'var(--primary)') : 'var(--text-muted)',
+                                transition: 'color 0.4s ease'
                             }}>
                                 {step.label}
                             </div>
@@ -102,6 +102,65 @@ const PipelineTracker: React.FC<PipelineTrackerProps> = ({ currentStage, classNa
                     );
                 })}
             </div>
+
+            {/* Mobile Vertical Stepper */}
+            <div className="visible-mobile" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                {steps.map((step, index) => {
+                    const isCompleted = index <= currentStepIndex;
+                    const isCurrent = index === currentStepIndex;
+
+                    return (
+                        <div key={step.id} style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <div style={{
+                                    width: '28px', height: '28px', borderRadius: '50%',
+                                    background: isCurrent
+                                        ? (isLost ? 'var(--danger)' : 'var(--primary)')
+                                        : (isCompleted ? (isLost ? 'var(--danger)' : 'var(--primary)') : 'var(--bg-card)'),
+                                    border: `2px solid ${isCurrent || isCompleted ? (isLost ? 'var(--danger)' : 'var(--primary)') : 'var(--border)'}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: isCompleted || isCurrent ? 'white' : 'var(--text-muted)',
+                                    fontWeight: '700',
+                                    fontSize: '0.7rem',
+                                    zIndex: 1
+                                }}>
+                                    {isCompleted && !isCurrent ? '✓' : index + 1}
+                                </div>
+                                {index < steps.length - 1 && (
+                                    <div style={{
+                                        width: '2px', height: '24px',
+                                        background: index < currentStepIndex ? (isLost ? 'var(--danger)' : 'var(--primary)') : 'var(--border)',
+                                        margin: '4px 0'
+                                    }} />
+                                )}
+                            </div>
+                            <div style={{ paddingTop: '2px' }}>
+                                <div style={{
+                                    fontSize: '0.875rem',
+                                    fontWeight: 700,
+                                    color: isCurrent ? (isLost ? 'var(--danger)' : 'var(--primary)') : 'var(--text-main)'
+                                }}>
+                                    {step.label}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                    {isCurrent ? currentStage : step.stages[0]}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <style>
+                {`
+                @media (min-width: 769px) {
+                    .visible-mobile { display: none !important; }
+                }
+                @media (max-width: 768px) {
+                    .hidden-mobile { display: none !important; }
+                }
+                `}
+            </style>
         </div>
     );
 };

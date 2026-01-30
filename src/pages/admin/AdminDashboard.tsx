@@ -15,6 +15,7 @@ const AdminDashboard: React.FC = () => {
     const { t } = useSettings();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [metrics, setMetrics] = useState({ branchLeads: 0, demosDone: 0, activeProducts: 0 });
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     useEffect(() => {
         calculateMetrics();
@@ -40,75 +41,151 @@ const AdminDashboard: React.FC = () => {
     };
 
     const renderDashboard = () => (
-        <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <div className="animate-fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-8)' }}>
                 <div>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem' }}>{t('admin.dashboard_title')}</h2>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Overview of branch operations and inventory state.</p>
+                    <h1 style={{ fontSize: '2.25rem', marginBottom: 'var(--space-1)' }}>
+                        {t('admin.dashboard_title')}
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem', fontWeight: 500 }}>
+                        Welcome back, <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{user?.name}</span>. Here's what's happening today.
+                    </p>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <button className="btn" onClick={calculateMetrics}>🔄 {t('common.refresh')}</button>
-                </div>
+                <button className="btn btn-primary" onClick={calculateMetrics} style={{ height: '44px' }}>
+                    <span>🔄</span> {t('common.refresh')}
+                </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                <StatCard title={t('metrics.branchLeads')} value={metrics.branchLeads.toString()} trend={t('metrics.monthTrend')} trendType="up" sparklineData={[30, 45, 40, 60, 55, 75, metrics.branchLeads]} />
-                <StatCard title={t('metrics.demoConversions')} value={metrics.demosDone.toString()} trend={t('metrics.highVolume')} trendType="up" sparklineData={[10, 15, 12, 18, 20, 25, metrics.demosDone]} />
-                <StatCard title={t('metrics.activeInventory')} value={metrics.activeProducts.toString()} trend={t('metrics.catalogStatus')} trendType="up" sparklineData={[15, 15, 16, 16, 17, 18, metrics.activeProducts]} />
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: 'var(--space-6)',
+                marginBottom: 'var(--space-8)'
+            }}>
+                <StatCard
+                    title={t('metrics.branchLeads')}
+                    value={metrics.branchLeads.toString()}
+                    trend="+12%"
+                    trendType="up"
+                    sparklineData={[30, 45, 40, 60, 55, 75, 80]}
+                />
+                <StatCard
+                    title={t('metrics.demoConversions')}
+                    value={metrics.demosDone.toString()}
+                    trend="+5%"
+                    trendType="up"
+                    sparklineData={[10, 15, 12, 18, 20, 25, 30]}
+                />
+                <StatCard
+                    title={t('metrics.activeInventory')}
+                    value={metrics.activeProducts.toString()}
+                    trend="Stable"
+                    trendType="up"
+                    sparklineData={[15, 15, 16, 16, 17, 18, 18]}
+                />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 'var(--space-8)' }}>
                 <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <h4 style={{ fontWeight: 700 }}>Recent Regional Activity</h4>
-                        <button className="btn" style={{ fontSize: '0.75rem' }} onClick={() => setActiveTab('enquiries')}>All Enquiries</button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+                        <h3 style={{ fontSize: '1.25rem' }}>Recent Regional Activity</h3>
+                        <button
+                            className="btn"
+                            style={{ fontSize: '0.8125rem', padding: '0.5rem 1rem', border: '1px solid var(--border)' }}
+                            onClick={() => setActiveTab('enquiries')}
+                        >
+                            View All
+                        </button>
                     </div>
                     <EnquiryLog />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <div className="card" style={{ background: 'linear-gradient(135deg, #0f172a, #1e293b)', color: 'white' }}>
-                        <h4 style={{ color: '#86efac', marginBottom: '1rem' }}>{t('quickActions.adminTip')}</h4>
-                        <p style={{ fontSize: '0.85rem', lineHeight: 1.6, opacity: 0.9 }}>
-                            {t('quickActions.tipText')}
-                        </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                    <div className="card" style={{
+                        background: 'linear-gradient(135deg, var(--primary-dark), var(--primary))',
+                        color: 'white',
+                        border: 'none',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{ position: 'relative', zIndex: 1 }}>
+                            <h3 style={{ color: 'white', marginBottom: 'var(--space-3)', fontSize: '1.125rem' }}>
+                                {t('quickActions.adminTip')}
+                            </h3>
+                            <p style={{ fontSize: '0.875rem', lineHeight: 1.6, opacity: 0.9, fontWeight: 500 }}>
+                                {t('quickActions.tipText')}
+                            </p>
+                        </div>
+                        <div style={{
+                            position: 'absolute',
+                            right: '-20px',
+                            bottom: '-20px',
+                            fontSize: '5rem',
+                            opacity: 0.1,
+                            transform: 'rotate(-15deg)'
+                        }}>💡</div>
                     </div>
+
                     <div className="card">
-                        <h4 style={{ fontWeight: 700, marginBottom: '1rem' }}>{t('quickActions.title')}</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <button className="btn" style={{ textAlign: 'left', background: 'var(--bg-app)' }} onClick={() => setActiveTab('products')}>{t('quickActions.manageProducts')}</button>
-                            <button className="btn" style={{ textAlign: 'left', background: 'var(--bg-app)' }} onClick={() => setActiveTab('branches')}>{t('quickActions.registerBranch')}</button>
+                        <h3 style={{ marginBottom: 'var(--space-4)', fontSize: '1.125rem' }}>{t('quickActions.title')}</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                            <button
+                                className="btn"
+                                style={{ background: 'var(--bg-secondary)', border: 'none', padding: 'var(--space-4)', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-1)' }}
+                                onClick={() => setActiveTab('products')}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>📦</span>
+                                <span style={{ fontWeight: 700 }}>Products</span>
+                            </button>
+                            <button
+                                className="btn"
+                                style={{ background: 'var(--bg-secondary)', border: 'none', padding: 'var(--space-4)', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-1)' }}
+                                onClick={() => setActiveTab('branches')}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>🏢</span>
+                                <span style={{ fontWeight: 700 }}>Branches</span>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'products': return <div className="card"><ProductMaster /></div>;
+            case 'products': return <div className="card animate-fade-in"><ProductMaster /></div>;
             case 'branches':
-                // Only allow owner/admin role to access branch management
                 if (user?.role === 'branch_admin') {
                     setActiveTab('dashboard');
                     return renderDashboard();
                 }
-                return <div className="card"><BranchMaster /></div>;
-            case 'enquiries': return <div className="card"><EnquiryLog role={user?.role === 'branch_admin' ? 'branch_admin' : 'admin'} /></div>;
-            case 'conversions': return <ConversionOverview />;
-            case 'promotions': return <div className="card"><PromotionManagement /></div>;
+                return <div className="card animate-fade-in"><BranchMaster /></div>;
+            case 'enquiries': return <div className="card animate-fade-in"><EnquiryLog role={user?.role === 'branch_admin' ? 'branch_admin' : 'admin'} /></div>;
+            case 'conversions': return <div className="animate-fade-in"><ConversionOverview /></div>;
+            case 'promotions': return <div className="card animate-fade-in"><PromotionManagement /></div>;
             case 'dashboard':
             default: return renderDashboard();
         }
     };
 
     return (
-        <div style={{ display: 'flex', background: 'var(--bg-app)', height: '100vh', overflow: 'hidden' }}>
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-            <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-8)', minHeight: 'calc(100vh - 120px)' }}>
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onCollapseChange={setIsCollapsed} />
+            <div style={{ flex: 1, marginLeft: isCollapsed ? '88px' : '260px', transition: 'margin-left 300ms ease' }} className="main-content-wrapper">
                 {renderContent()}
-            </main>
+            </div>
+
+            <style>
+                {`
+                @media (max-width: 1024px) {
+                    .main-content-wrapper { marginLeft: 88px !important; }
+                }
+                @media (max-width: 768px) {
+                    .main-content-wrapper { marginLeft: 0 !important; paddingBottom: 80px; }
+                }
+                `}
+            </style>
         </div>
     );
 };

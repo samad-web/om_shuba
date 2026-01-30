@@ -5,6 +5,7 @@ import GaugeWidget from '../../components/dashboard/GaugeWidget';
 import ProductMaster from './ProductMaster';
 import BranchMaster from './BranchMaster';
 import EnquiryLog from './EnquiryLog';
+import ConversionOverview from './ConversionOverview';
 import UserManagement from './UserManagement';
 import AccountSettings from './AccountSettings';
 import PromotionManagement from '../../components/PromotionManagement';
@@ -15,6 +16,7 @@ import { useSettings } from '../../context/SettingsContext';
 const OwnerDashboard: React.FC = () => {
     const { t } = useSettings();
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const [metrics, setMetrics] = useState({
         activePipeline: 0,
         conversionRate: 0,
@@ -114,6 +116,8 @@ const OwnerDashboard: React.FC = () => {
                 return <div className="card" style={{ height: 'auto' }}><BranchMaster /></div>;
             case 'enquiries':
                 return <div className="card" style={{ height: 'auto' }}><EnquiryLog /></div>;
+            case 'conversions':
+                return <ConversionOverview />;
             case 'users':
                 return <div className="card" style={{ height: 'auto' }}><UserManagement /></div>;
             case 'settings':
@@ -186,7 +190,7 @@ const OwnerDashboard: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                                <button className="btn" style={{ width: '100%', marginTop: 'auto', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: '10px' }}>View Full Sales Report</button>
+                                <button className="btn" style={{ width: '100%', marginTop: 'auto', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: '10px' }} onClick={() => setActiveTab('conversions')}>View Full Sales Report</button>
                             </div>
 
                             <div className="card" style={{ gridColumn: 'span 1' }}>
@@ -247,12 +251,22 @@ const OwnerDashboard: React.FC = () => {
     };
 
     return (
-        <div style={{ display: 'flex', background: 'var(--bg-app)', height: '100vh', overflow: 'hidden' }}>
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-
-            <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-8)', minHeight: 'calc(100vh - 120px)' }}>
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onCollapseChange={setIsCollapsed} />
+            <div style={{ flex: 1, marginLeft: isCollapsed ? '88px' : '260px', transition: 'margin-left 300ms ease' }} className="main-content-wrapper">
                 {renderContent()}
-            </main>
+            </div>
+
+            <style>
+                {`
+                @media (max-width: 1024px) {
+                    .main-content-wrapper { marginLeft: 88px !important; }
+                }
+                @media (max-width: 768px) {
+                    .main-content-wrapper { marginLeft: 0 !important; paddingBottom: 80px; }
+                }
+                `}
+            </style>
         </div>
     );
 };

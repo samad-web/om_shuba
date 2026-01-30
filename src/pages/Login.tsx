@@ -28,41 +28,97 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-app)', gap: '1rem' }}>
-            <div className="card" style={{ width: '100%', maxWidth: '350px' }}>
-                <h2 style={{ textAlign: 'center', marginBottom: '0.25rem' }}>{t('login.title')}</h2>
-                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{t('login.subtitle')}</p>
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '100vh',
+            background: 'radial-gradient(circle at top right, var(--primary-light), transparent), radial-gradient(circle at bottom left, var(--primary-glow), transparent), var(--bg-app)',
+            padding: 'var(--space-4)'
+        }}>
+            <div className="card animate-fade-in" style={{
+                width: '100%',
+                maxWidth: '400px',
+                padding: 'var(--space-12) var(--space-8)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-8)' }}>
+                    <div style={{
+                        width: '64px',
+                        height: '64px',
+                        background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                        borderRadius: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 10px 20px var(--primary-glow)'
+                    }}>
+                        <span style={{ color: 'white', fontWeight: 800, fontSize: '2rem' }}>O</span>
+                    </div>
+                </div>
 
-                {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+                <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
+                    <h1 style={{ fontSize: '1.75rem', marginBottom: 'var(--space-2)', color: 'var(--text-main)', letterSpacing: '-0.04em' }}>
+                        OM SHUBA
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500 }}>
+                        {t('login.subtitle')}
+                    </p>
+                </div>
+
+                {error && (
+                    <div className="animate-fade-in" style={{
+                        color: 'var(--danger)',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        padding: 'var(--space-3)',
+                        borderRadius: 'var(--radius)',
+                        marginBottom: 'var(--space-6)',
+                        textAlign: 'center',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        border: '1px solid rgba(239, 68, 68, 0.2)'
+                    }}>
+                        {error}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>{t('common.username')}</label>
+                    <div style={{ marginBottom: 'var(--space-4)' }}>
+                        <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {t('common.username')}
+                        </label>
                         <input
                             className="input"
                             type="text"
+                            placeholder="username"
                             value={username}
                             onChange={e => setUsername(e.target.value)}
                             autoFocus
                         />
                     </div>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>{t('common.password')}</label>
+                    <div style={{ marginBottom: 'var(--space-8)' }}>
+                        <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {t('common.password')}
+                        </label>
                         <input
                             className="input"
                             type="password"
+                            placeholder="••••••••"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '48px', fontSize: '1rem' }}>
                         {t('common.login')}
                     </button>
                 </form>
-                <div style={{ marginTop: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                    
-                </div>
             </div>
+
+            <p style={{ marginTop: 'var(--space-8)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>
+                &copy; {new Date().getFullYear()} Om Shuba Agencies. All rights reserved.
+            </p>
         </div>
     );
 };

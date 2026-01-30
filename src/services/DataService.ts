@@ -1,27 +1,16 @@
 import type { IDataRepository } from './interfaces/IDataRepository';
 import { LocalStorageRepository } from './repositories/LocalStorageRepository';
+import { SupabaseRepository } from './repositories/SupabaseRepository';
 
-/**
- * Data Service - Central access point for all data operations
- * 
- * To migrate to Supabase:
- * 1. Create SupabaseRepository.ts implementing IDataRepository
- * 2. Change the repository assignment below
- * 3. No other code changes needed!
- * 
- * Example Supabase setup:
- * ```typescript
- * import { SupabaseRepository } from './repositories/SupabaseRepository';
- * const repository: IDataRepository = new SupabaseRepository();
- * ```
- */
+const isSupabaseEnabled =
+    import.meta.env.VITE_SUPABASE_URL &&
+    import.meta.env.VITE_SUPABASE_ANON_KEY &&
+    import.meta.env.VITE_USE_SUPABASE === 'true';
 
-// Current implementation using localStorage
-const repository: IDataRepository = new LocalStorageRepository();
-
-// Future Supabase implementation (commented out for now):
-// import { SupabaseRepository } from './repositories/SupabaseRepository';
-// const repository: IDataRepository = new SupabaseRepository(supabaseClient);
+// Current implementation - switches based on env
+const repository: IDataRepository = isSupabaseEnabled
+    ? new SupabaseRepository()
+    : new LocalStorageRepository();
 
 /**
  * Export the repository instance as the default data service
@@ -31,18 +20,24 @@ export const dataService = repository;
 
 /**
  * Synchronous wrapper for backwards compatibility
- * TODO: Remove these wrappers after updating all components to use async/await
+ * WARNING: These methods will ONLY work with LocalStorageRepository.
+ * They are kept to prevent the app from breaking during migration.
+ * TODO: Migrate all components to use dataService (async) instead of storage (sync)
  */
 export const storage = {
     // User Operations
     getUsers: () => {
-        const users: any[] = [];
-        repository.getUsers().then(result => users.push(...result));
+        if (isSupabaseEnabled) {
+            console.warn('Sync storage.getUsers() called while Supabase is enabled. This will return stale LocalStorage data.');
+        }
         return JSON.parse(localStorage.getItem('tc_users') || '[]');
     },
 
     // Product Operations
     getProducts: () => {
+        if (isSupabaseEnabled) {
+            console.warn('Sync storage.getProducts() called while Supabase is enabled.');
+        }
         return JSON.parse(localStorage.getItem('tc_products') || '[]');
     },
 
@@ -56,7 +51,7 @@ export const storage = {
         return JSON.parse(localStorage.getItem('tc_enquiries') || '[]');
     },
 
-    // Legacy methods - kept for backwards compatibility
+    // Legacy methods
     addProduct: (product: any) => repository.addProduct(product),
     updateProduct: (product: any) => repository.updateProduct(product),
     addBranch: (branch: any) => repository.addBranch(branch),
@@ -71,7 +66,8 @@ export const storage = {
     updatePromotion: (promotion: any) => repository.updatePromotion(promotion),
     deletePromotion: (id: string) => repository.deletePromotion(id),
     login: (username: string, password: string) => {
-        repository.login(username, password);
+        // This is problematic as it's sync. For migration, we keep it reading from localStorage
+        // but the actual login check should be async via dataService.login
         return JSON.parse(localStorage.getItem('tc_users') || '[]').find((u: any) => u.username === username && u.password === password);
     }
 };
