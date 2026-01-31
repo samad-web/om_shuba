@@ -34,9 +34,12 @@ export class LocalStorageRepository implements IDataRepository {
             localStorage.setItem(KEYS.BRANCHES, JSON.stringify(MOCK_BRANCHES));
         } else {
             // Ensure Hosur Branch exists in local storage for migration
-            const currentBranches = JSON.parse(localStorage.getItem(KEYS.BRANCHES) || '[]');
-            if (!currentBranches.find((b: any) => b.id === 'b4')) {
-                currentBranches.push(MOCK_BRANCHES.find(b => b.id === 'b4'));
+            const currentBranches = JSON.parse(localStorage.getItem(KEYS.BRANCHES) || '[]').filter(Boolean);
+            if (!currentBranches.find((b: any) => b && b.id === 'b4')) {
+                const hosurBranch = MOCK_BRANCHES.find(b => b.id === 'b4');
+                if (hosurBranch) {
+                    currentBranches.push(hosurBranch);
+                }
                 localStorage.setItem(KEYS.BRANCHES, JSON.stringify(currentBranches));
             }
         }
@@ -45,10 +48,13 @@ export class LocalStorageRepository implements IDataRepository {
         if (!localStorage.getItem(KEYS.USERS)) {
             localStorage.setItem(KEYS.USERS, JSON.stringify(MOCK_USERS));
         } else {
-            // Ensure admin-hosur exists in local storage for migration
-            const currentUsers = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
-            if (!currentUsers.find((u: any) => u.username === 'admin-hosur')) {
-                currentUsers.push(MOCK_USERS.find(u => u.username === 'admin-hosur'));
+            // Ensure hosur-admin exists in local storage for migration
+            const currentUsers = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]').filter(Boolean);
+            if (!currentUsers.find((u: any) => u && u.username === 'hosur-admin')) {
+                const hosurAdmin = MOCK_USERS.find(u => u.username === 'hosur-admin');
+                if (hosurAdmin) {
+                    currentUsers.push(hosurAdmin);
+                }
                 localStorage.setItem(KEYS.USERS, JSON.stringify(currentUsers));
             }
         }
@@ -81,7 +87,7 @@ export class LocalStorageRepository implements IDataRepository {
 
     // User Operations
     async getUsers(): Promise<User[]> {
-        return JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
+        return (JSON.parse(localStorage.getItem(KEYS.USERS) || '[]') as (User | null)[]).filter((u): u is User => u !== null);
     }
 
     async getUserById(id: string): Promise<User | null> {
@@ -114,7 +120,7 @@ export class LocalStorageRepository implements IDataRepository {
 
     // Product Operations
     async getProducts(): Promise<Product[]> {
-        return JSON.parse(localStorage.getItem(KEYS.PRODUCTS) || '[]');
+        return (JSON.parse(localStorage.getItem(KEYS.PRODUCTS) || '[]') as (Product | null)[]).filter((p): p is Product => p !== null);
     }
 
     async getProductsByBranch(branchId: string): Promise<Product[]> {
@@ -141,7 +147,7 @@ export class LocalStorageRepository implements IDataRepository {
 
     // Branch Operations
     async getBranches(): Promise<Branch[]> {
-        return JSON.parse(localStorage.getItem(KEYS.BRANCHES) || '[]');
+        return (JSON.parse(localStorage.getItem(KEYS.BRANCHES) || '[]') as (Branch | null)[]).filter((b): b is Branch => b !== null);
     }
 
     async getBranchById(id: string): Promise<Branch | null> {
@@ -174,7 +180,7 @@ export class LocalStorageRepository implements IDataRepository {
 
     // Enquiry Operations
     async getEnquiries(): Promise<Enquiry[]> {
-        return JSON.parse(localStorage.getItem(KEYS.ENQUIRIES) || '[]');
+        return (JSON.parse(localStorage.getItem(KEYS.ENQUIRIES) || '[]') as (Enquiry | null)[]).filter((e): e is Enquiry => e !== null);
     }
 
     async getEnquiryById(id: string): Promise<Enquiry | null> {
@@ -222,7 +228,7 @@ export class LocalStorageRepository implements IDataRepository {
 
     // Promotion Operations
     async getPromotions(): Promise<Promotion[]> {
-        return JSON.parse(localStorage.getItem(KEYS.PROMOTIONS) || '[]');
+        return (JSON.parse(localStorage.getItem(KEYS.PROMOTIONS) || '[]') as (Promotion | null)[]).filter((p): p is Promotion => p !== null);
     }
 
     async addPromotion(promotion: Promotion): Promise<void> {
