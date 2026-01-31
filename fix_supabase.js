@@ -25,12 +25,13 @@ async function fix() {
 
     // 2. Delete old user if exists
     await supabase.from('users').delete().eq('username', 'admin-hosur');
+    await supabase.from('users').delete().eq('username', 'hosur-admin');
 
     // 3. Add User with new credentials
     const { error: userError } = await supabase.from('users').insert([{
         id: 'u7',
-        username: 'hosur-admin',
-        password: 'hosurpass',
+        username: 'admin_hosur',
+        password: 'password',
         role: 'branch_admin',
         name: 'Hosur Admin',
         branch_id: 'b4'
