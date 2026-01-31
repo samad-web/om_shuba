@@ -9,23 +9,25 @@ import PromotionManagement from '../../components/PromotionManagement';
 import { useAuth } from '../../context/AuthContext';
 import { dataService } from '../../services/DataService';
 import { useSettings } from '../../context/SettingsContext';
+import { AdminMessaging, BranchMessaging } from '../../components/dashboard/Messaging';
 
 const AdminDashboard: React.FC = () => {
     const { user } = useAuth();
     const { t } = useSettings();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [metrics, setMetrics] = useState({ branchLeads: 0, demosDone: 0, activeProducts: 0 });
-    const [loading, setLoading] = useState(true);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
+
+    // Messaging State
+    const [showMessaging, setShowMessaging] = useState(false);
 
     useEffect(() => {
         calculateMetrics();
     }, [user]);
 
     const calculateMetrics = async () => {
-        setLoading(true);
         try {
             const [enquiries, products, fetchedBranches] = await Promise.all([
                 dataService.getEnquiries(),
@@ -52,8 +54,6 @@ const AdminDashboard: React.FC = () => {
             });
         } catch (error) {
             console.error("Failed to load admin metrics", error);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -70,17 +70,34 @@ const AdminDashboard: React.FC = () => {
                     </h1>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem', fontWeight: 500 }}>
-                            Welcome back, <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{user?.name}</span>.
+                            {t('admin.welcomeBack')}, <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{user?.name}</span>.
                         </p>
+
+                        {/* Messaging Icon */}
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                className="btn"
+                                style={{ padding: '0.5rem', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                onClick={() => setShowMessaging(!showMessaging)}
+                            >
+                                💬
+                            </button>
+                            {showMessaging && (
+                                user?.role === 'admin'
+                                    ? <AdminMessaging onClose={() => setShowMessaging(false)} align="left" />
+                                    : <BranchMessaging onClose={() => setShowMessaging(false)} align="left" />
+                            )}
+                        </div>
+
                         {user?.role === 'admin' && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', background: 'var(--bg-card)', padding: '4px 12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Branch:</span>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{t('admin.branch')}:</span>
                                 <select
                                     value={selectedBranchId}
                                     onChange={(e) => setSelectedBranchId(e.target.value)}
                                     style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
                                 >
-                                    <option value="all">All Branches</option>
+                                    <option value="all">{t('admin.allBranches')}</option>
                                     {branches.map(b => (
                                         <option key={b.id} value={b.id}>{b.name}</option>
                                     ))}
@@ -94,12 +111,7 @@ const AdminDashboard: React.FC = () => {
                 </button>
             </div>
 
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: 'var(--space-6)',
-                marginBottom: 'var(--space-8)'
-            }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
                 <StatCard
                     title={t('metrics.branchLeads')}
                     value={metrics.branchLeads.toString()}
@@ -108,7 +120,7 @@ const AdminDashboard: React.FC = () => {
                     sparklineData={[30, 45, 40, 60, 55, 75, 80]}
                 />
                 <StatCard
-                    title="Closed Deals"
+                    title={t('metrics.conversion')}
                     value={metrics.demosDone.toString()} // Using demosDone as a proxy for closed deals for now as per dashboard logic
                     trend="+15%"
                     trendType="up"
@@ -118,7 +130,7 @@ const AdminDashboard: React.FC = () => {
                 <StatCard
                     title={t('metrics.activeInventory')}
                     value={metrics.activeProducts.toString()}
-                    trend="Stable"
+                    trend={t('common.stable')}
                     trendType="up"
                     sparklineData={[15, 15, 16, 16, 17, 18, 18]}
                 />
@@ -127,13 +139,13 @@ const AdminDashboard: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 'var(--space-8)' }}>
                 <div className="card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-                        <h3 style={{ fontSize: '1.25rem' }}>Recent Regional Activity</h3>
+                        <h3 style={{ fontSize: '1.25rem' }}>{t('admin.recent_activity')}</h3>
                         <button
                             className="btn"
                             style={{ fontSize: '0.8125rem', padding: '0.5rem 1rem', border: '1px solid var(--border)' }}
                             onClick={() => setActiveTab('enquiries')}
                         >
-                            View All
+                            {t('telecaller.viewAll')}
                         </button>
                     </div>
                     <EnquiryLog branchId={user?.role === 'branch_admin' ? user?.branchId : selectedBranchId} />
@@ -174,7 +186,7 @@ const AdminDashboard: React.FC = () => {
                                 onClick={() => setActiveTab('products')}
                             >
                                 <span style={{ fontSize: '1.5rem' }}>📦</span>
-                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>Products</span>
+                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>{t('nav.products')}</span>
                             </button>
                             <button
                                 className="btn"
@@ -182,7 +194,7 @@ const AdminDashboard: React.FC = () => {
                                 onClick={() => setActiveTab('conversions')}
                             >
                                 <span style={{ fontSize: '1.5rem' }}>🤝</span>
-                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>Closed Deals</span>
+                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>{t('nav.conversions')}</span>
                             </button>
                         </div>
                     </div>

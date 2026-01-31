@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Product } from '../../types';
 import { dataService } from '../../services/DataService';
+import { useAuth } from '../../context/AuthContext';
+import { useSettings } from '../../context/SettingsContext';
 import { downloadProductTemplate, parseProductExcel, type BulkUploadResult } from '../../services/excelService';
 
 interface ProductMasterProps {
@@ -8,6 +10,8 @@ interface ProductMasterProps {
 }
 
 const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
+    const { user } = useAuth();
+    const { t, language } = useSettings();
     const [products, setProducts] = useState<Product[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,9 +45,13 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
     };
 
     const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.category.toLowerCase().includes(searchQuery.toLowerCase())
+        p.active &&
+        !['Verification Product', 'Persistent Test Product', 'Test Product RLS'].includes(p.name) &&
+        (
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.category.toLowerCase().includes(searchQuery.toLowerCase())
+        )
     );
 
     const openModal = (product?: Product) => {
@@ -52,7 +60,10 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
             setFormData(product);
         } else {
             setEditingProduct(null);
-            setFormData({ name: '', sku: '', category: '', shortDescription: '', priceRange: '', demoUrl: '', active: true });
+            setFormData({
+                name: '', sku: '', category: '', shortDescription: '', priceRange: '', demoUrl: '', active: true,
+                nameTa: '', categoryTa: '', shortDescriptionTa: ''
+            });
         }
         setIsModalOpen(true);
     };
@@ -110,9 +121,20 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
         // For now, we'll iterate. Ideally, we should add a bulk method to the repo.
         // Assuming storage.bulkUpdateProducts logic:
 
+        // Resolve correct branchId
+        const effectiveBranchId = (branchId && branchId !== 'all') ? branchId : (user?.role === 'branch_admin' ? user.branchId : undefined);
+
         const promises = [
-            ...uploadResult.productsToCreate.map(p => dataService.addProduct({ ...p, id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5) } as Product)),
-            ...uploadResult.productsToUpdate.map(p => dataService.updateProduct(p))
+            ...uploadResult.productsToCreate.map(p => {
+                return dataService.addProduct({
+                    ...p,
+                    id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    branchId: effectiveBranchId
+                } as Product);
+            }),
+            ...uploadResult.productsToUpdate.map(p => {
+                return dataService.updateProduct(p);
+            })
         ];
 
         Promise.all(promises).then(() => {
@@ -130,9 +152,16 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
         setUploadResult(null);
     };
 
+    const getLocalizedContent = (product: Product, field: 'name' | 'category' | 'shortDescription') => {
+        if (language === 'ta') {
+            return product[`${field}Ta` as keyof Product] || product[field];
+        }
+        return product[field];
+    };
+
     // Group products by category
     const groupedProducts = filteredProducts.reduce((acc, product) => {
-        const category = product.category || 'Uncategorized';
+        const category = getLocalizedContent(product, 'category') as string || 'Uncategorized';
         if (!acc[category]) acc[category] = [];
         acc[category].push(product);
         return acc;
@@ -140,18 +169,18 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
 
     const categories = Object.keys(groupedProducts).sort();
 
-    if (loading) return <div>Loading products...</div>;
+    if (loading) return <div>{t('common.loading')}</div>;
 
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Product Master</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{t('products.title')}</h3>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     <div style={{ position: 'relative' }}>
                         <input
                             type="text"
                             className="input"
-                            placeholder="Search products..."
+                            placeholder={t('products.search')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             style={{ width: '250px', paddingLeft: '2.5rem' }}
@@ -167,7 +196,7 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                         style={{ display: 'none' }}
                     />
                     <button className="btn" onClick={() => fileInputRef.current?.click()} title="Upload Excel">📄⬆️</button>
-                    <button className="btn btn-primary" onClick={() => openModal()}>+ Add Product</button>
+                    <button className="btn btn-primary" onClick={() => openModal()}>+ {t('products.addProduct')}</button>
                 </div>
             </div>
 
@@ -191,11 +220,11 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr style={{ textAlign: 'left', background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)' }}>
-                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>NAME / SKU</th>
-                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>DESCRIPTION</th>
-                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>PRICE RANGE</th>
-                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>STATUS</th>
-                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800, textAlign: 'right' }}>ACTIONS</th>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>{t('products.productName')} / {t('products.sku')}</th>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>{t('products.description')}</th>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>{t('products.priceRange')}</th>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>{t('products.status')}</th>
+                                        <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800, textAlign: 'right' }}>{t('common.actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -210,12 +239,12 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                                                     filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
                                                     marginBottom: '0.25rem'
                                                 }}>
-                                                    {p.name}
+                                                    {getLocalizedContent(p, 'name')}
                                                 </div>
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{p.sku}</div>
                                             </td>
                                             <td style={{ padding: '1rem 0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '250px' }}>
-                                                {p.shortDescription}
+                                                {getLocalizedContent(p, 'shortDescription')}
                                             </td>
                                             <td style={{ padding: '1rem 0.5rem', fontWeight: 600, color: 'var(--primary)' }}>
                                                 {p.priceRange}
@@ -227,11 +256,11 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                                                     color: p.active ? '#15803d' : '#b91c1c',
                                                     fontWeight: 700
                                                 }}>
-                                                    {p.active ? 'ACTIVE' : 'INACTIVE'}
+                                                    {p.active ? t('products.active').toUpperCase() : t('products.inactive').toUpperCase()}
                                                 </span>
                                             </td>
                                             <td style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>
-                                                <button className="btn" style={{ fontSize: '0.8rem', marginRight: '0.5rem' }} onClick={() => openModal(p)}>Edit</button>
+                                                <button className="btn" style={{ fontSize: '0.8rem', marginRight: '0.5rem' }} onClick={() => openModal(p)}>{t('common.edit')}</button>
                                                 <button
                                                     className="btn"
                                                     style={{
@@ -243,7 +272,7 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                                                     }}
                                                     onClick={() => toggleStatus(p)}
                                                 >
-                                                    {p.active ? 'Disable' : 'Enable'}
+                                                    {p.active ? t('products.inactive') : t('products.active')}
                                                 </button>
                                             </td>
                                         </tr>
@@ -271,35 +300,47 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                     zIndex: 2000
                 }}>
                     <div className="card animate-fade-in" style={{ width: '500px', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
-                        <h3 style={{ marginBottom: '1.5rem' }}>{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
+                        <h3 style={{ marginBottom: '1.5rem' }}>{editingProduct ? t('products.editProduct') : t('products.addProduct')}</h3>
                         <form onSubmit={handleSubmit}>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Name</label>
-                                <input className="input" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.productName')} (English)</label>
+                                <input className="input" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder={t('products.namePlaceholder')} />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>SKU</label>
-                                <input className="input" required value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.productName')} (Tamil)</label>
+                                <input className="input" value={formData.nameTa || ''} onChange={e => setFormData({ ...formData, nameTa: e.target.value })} placeholder={t('products.nameTaPlaceholder')} />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Category</label>
-                                <input className="input" required value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.sku')}</label>
+                                <input className="input" required value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} placeholder={t('products.skuPlaceholder')} />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Description (Short)</label>
-                                <input className="input" required value={formData.shortDescription} onChange={e => setFormData({ ...formData, shortDescription: e.target.value })} />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.category')} (English)</label>
+                                <input className="input" required value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} placeholder={t('products.categoryPlaceholder')} />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Price Range</label>
-                                <input className="input" required value={formData.priceRange} onChange={e => setFormData({ ...formData, priceRange: e.target.value })} />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.category')} (Tamil)</label>
+                                <input className="input" value={formData.categoryTa || ''} onChange={e => setFormData({ ...formData, categoryTa: e.target.value })} placeholder={t('products.categoryTaPlaceholder')} />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.description')} (Short - English)</label>
+                                <input className="input" required value={formData.shortDescription} onChange={e => setFormData({ ...formData, shortDescription: e.target.value })} placeholder={t('products.shortDescPlaceholder')} />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.description')} (Short - Tamil)</label>
+                                <input className="input" value={formData.shortDescriptionTa || ''} onChange={e => setFormData({ ...formData, shortDescriptionTa: e.target.value })} placeholder={t('products.shortDescTaPlaceholder')} />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.priceRange')}</label>
+                                <input className="input" required value={formData.priceRange} onChange={e => setFormData({ ...formData, priceRange: e.target.value })} placeholder={t('products.pricePlaceholder')} />
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Demo URL</label>
-                                <input className="input" value={formData.demoUrl || ''} onChange={e => setFormData({ ...formData, demoUrl: e.target.value })} placeholder="YouTube or Website link" />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.demoUrl')}</label>
+                                <input className="input" value={formData.demoUrl || ''} onChange={e => setFormData({ ...formData, demoUrl: e.target.value })} placeholder={t('products.demoUrlPlaceholder')} />
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                                <button type="button" className="btn" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary">Save Product</button>
+                                <button type="button" className="btn" onClick={() => setIsModalOpen(false)}>{t('common.cancel')}</button>
+                                <button type="submit" className="btn btn-primary">{t('common.save')}</button>
                             </div>
                         </form>
                     </div>

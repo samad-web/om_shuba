@@ -1,4 +1,4 @@
-import type { User, Product, Branch, Enquiry, PipelineStage, Promotion } from '../../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Message } from '../../types';
 
 /**
  * Data Repository Interface
@@ -20,6 +20,7 @@ export interface IDataRepository {
     getProductById(id: string): Promise<Product | null>;
     addProduct(product: Product): Promise<void>;
     updateProduct(product: Product): Promise<void>;
+    deleteProduct?(id: string): Promise<void>;
 
     // Branch Operations
     getBranches(): Promise<Branch[]>;
@@ -45,4 +46,10 @@ export interface IDataRepository {
 
     // Feedback Operations
     addFeedback(feedback: { userId: string; message: string; rating: number }): Promise<void>;
+
+    // Messaging Operations
+    sendMessage(message: Omit<Message, 'id' | 'createdAt' | 'isRead'>): Promise<void>;
+    getMessages(branchId: string): Promise<Message[]>;
+    getSentMessages(senderRole: string, senderBranchId?: string): Promise<Message[]>;
+    markMessageAsRead(messageId: string): Promise<void>;
 }

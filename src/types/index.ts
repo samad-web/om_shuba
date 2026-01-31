@@ -19,6 +19,10 @@ export interface Product {
   demoUrl?: string; // Optional
   active: boolean;
   branchId?: string; // For branch-specific products
+  // Localization
+  nameTa?: string;
+  categoryTa?: string;
+  shortDescriptionTa?: string;
 }
 
 export interface Branch {
@@ -82,4 +86,15 @@ export interface Promotion {
   validUntil?: string; // ISO date string
   active: boolean;
   createdAt: string; // ISO date string
+}
+
+export interface Message {
+  id: string;
+  senderRole: 'admin' | 'branch_admin';
+  senderBranchId?: string; // Added for History tracking
+  targetBranchId: string; // 'all' or specific branch ID
+  content: string;
+  createdAt: string;
+  isRead: boolean;
+  senderName?: string; // Optional for UI display
 }

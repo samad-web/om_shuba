@@ -4,11 +4,13 @@ import { dataService } from '../../services/DataService';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
+import { useSettings } from '../../context/SettingsContext';
 
 const BranchMaster: React.FC = () => {
     const { user } = useAuth();
     const { confirm } = useConfirm();
     const { showToast } = useToast();
+    const { t } = useSettings();
     const [branches, setBranches] = useState<Branch[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
@@ -33,7 +35,7 @@ const BranchMaster: React.FC = () => {
             }
         } catch (error) {
             console.error("Failed to load branches", error);
-            showToast('Failed to load branches', 'error');
+            showToast(t('common.loading') + ' ' + t('common.error'), 'error');
         } finally {
             setLoading(false);
         }
@@ -56,7 +58,7 @@ const BranchMaster: React.FC = () => {
             if (editingBranch) {
                 // Update existing branch
                 await dataService.updateBranch({ ...editingBranch, ...formData } as Branch);
-                showToast('Branch updated successfully', 'success');
+                showToast(t('branches.saveSuccess'), 'success');
             } else {
                 // Add new branch
                 const newBranchId = 'b' + Date.now();
@@ -75,7 +77,7 @@ const BranchMaster: React.FC = () => {
                 };
                 await dataService.addUser(newBranchAdmin);
 
-                showToast(`Branch created! Username: ${newBranchAdmin.username}, Password: password`, 'success');
+                showToast(t('branches.createSuccess').replace('{0}', newBranchAdmin.username).replace('{1}', 'password'), 'success');
             }
             setIsModalOpen(false);
             loadBranches();
@@ -89,7 +91,7 @@ const BranchMaster: React.FC = () => {
         try {
             await dataService.updateBranch({ ...branch, active: !branch.active });
             loadBranches();
-            showToast(`Branch ${!branch.active ? 'enabled' : 'disabled'} successfully`, 'success');
+            showToast(t('branches.statusUpdate').replace('{0}', !branch.active ? t('common.active') : t('common.inactive')), 'success');
         } catch (error) {
             console.error("Failed to update status", error);
             showToast('Failed to update status', 'error');
@@ -98,10 +100,10 @@ const BranchMaster: React.FC = () => {
 
     const deleteBranch = async (branch: Branch) => {
         const confirmed = await confirm({
-            title: 'Delete Branch',
-            message: `Are you sure you want to delete "${branch.name}"? This action cannot be undone.`,
-            confirmText: 'Delete',
-            cancelText: 'Cancel',
+            title: t('branches.deleteBranch'),
+            message: t('branches.confirmDelete'),
+            confirmText: t('common.delete'),
+            cancelText: t('common.cancel'),
             danger: true
         });
 
@@ -109,7 +111,7 @@ const BranchMaster: React.FC = () => {
             try {
                 await dataService.deleteBranch(branch.id);
                 loadBranches();
-                showToast('Branch deleted successfully', 'success');
+                showToast(t('branches.deleteSuccess'), 'success');
             } catch (error) {
                 console.error("Failed to delete branch", error);
                 showToast('Failed to delete branch', 'error');
@@ -117,25 +119,25 @@ const BranchMaster: React.FC = () => {
         }
     };
 
-    if (loading) return <div>Loading branches...</div>;
+    if (loading) return <div>{t('common.loading')}</div>;
 
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h3>Branch Management {user?.role === 'branch_admin' && user.branchId && <span style={{ color: '#059669', fontWeight: 'normal' }}>({branches[0]?.name})</span>}</h3>
+                <h3>{t('branches.title')} {user?.role === 'branch_admin' && user.branchId && <span style={{ color: '#059669', fontWeight: 'normal' }}>({branches[0]?.name})</span>}</h3>
                 {user?.role !== 'branch_admin' && (
-                    <button className="btn btn-primary" onClick={() => openModal()}>+ Add Branch</button>
+                    <button className="btn btn-primary" onClick={() => openModal()}>+ {t('branches.addBranch')}</button>
                 )}
             </div>
 
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                     <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)' }}>
-                        <th style={{ padding: '0.5rem' }}>Name</th>
-                        <th style={{ padding: '0.5rem' }}>Location</th>
-                        <th style={{ padding: '0.5rem' }}>Contact</th>
-                        <th style={{ padding: '0.5rem' }}>Status</th>
-                        <th style={{ padding: '0.5rem' }}>Actions</th>
+                        <th style={{ padding: '0.5rem' }}>{t('branches.branchName')}</th>
+                        <th style={{ padding: '0.5rem' }}>{t('branches.location')}</th>
+                        <th style={{ padding: '0.5rem' }}>{t('branches.contactNumber')}</th>
+                        <th style={{ padding: '0.5rem' }}>{t('common.status')}</th>
+                        <th style={{ padding: '0.5rem' }}>{t('common.actions')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -150,17 +152,17 @@ const BranchMaster: React.FC = () => {
                                     background: b.active ? '#dcfce7' : '#fee2e2',
                                     color: b.active ? '#15803d' : '#b91c1c'
                                 }}>
-                                    {b.active ? 'Active' : 'Inactive'}
+                                    {b.active ? t('common.active') : t('common.inactive')}
                                 </span>
                             </td>
                             <td style={{ padding: '0.5rem' }}>
-                                <button className="btn" style={{ fontSize: '0.8rem', marginRight: '0.5rem' }} onClick={() => openModal(b)}>Edit</button>
+                                <button className="btn" style={{ fontSize: '0.8rem', marginRight: '0.5rem' }} onClick={() => openModal(b)}>{t('common.edit')}</button>
                                 <button className="btn" style={{ fontSize: '0.8rem', marginRight: '0.5rem', color: b.active ? 'var(--danger)' : 'var(--success)' }} onClick={() => toggleStatus(b)}>
-                                    {b.active ? 'Disable' : 'Enable'}
+                                    {b.active ? t('branches.disable') : t('branches.enable')}
                                 </button>
                                 {user?.role !== 'branch_admin' && (
                                     <button className="btn" style={{ fontSize: '0.8rem', color: '#dc2626', background: '#fee2e2' }} onClick={() => deleteBranch(b)}>
-                                        Delete
+                                        {t('common.delete')}
                                     </button>
                                 )}
                             </td>
@@ -175,23 +177,23 @@ const BranchMaster: React.FC = () => {
                     background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'
                 }}>
                     <div className="card" style={{ width: '400px' }}>
-                        <h3>{editingBranch ? 'Edit Branch' : 'Add Branch'}</h3>
+                        <h3>{editingBranch ? t('branches.editBranch') : t('branches.addBranch')}</h3>
                         <form onSubmit={handleSubmit}>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label>Name</label>
+                                <label>{t('branches.branchName')}</label>
                                 <input className="input" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label>Location</label>
+                                <label>{t('branches.location')}</label>
                                 <input className="input" required value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
-                                <label>Contact Number</label>
+                                <label>{t('branches.contactNumber')}</label>
                                 <input className="input" required value={formData.contactNumber} onChange={e => setFormData({ ...formData, contactNumber: e.target.value })} />
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                <button type="button" className="btn" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary">Save</button>
+                                <button type="button" className="btn" onClick={() => setIsModalOpen(false)}>{t('common.cancel')}</button>
+                                <button type="submit" className="btn btn-primary">{t('common.save')}</button>
                             </div>
                         </form>
                     </div>

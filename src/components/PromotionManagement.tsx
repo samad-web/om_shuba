@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import type { Promotion } from '../types';
 import { dataService } from '../services/DataService';
 import { Plus, Trash2, Edit2, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 import './PromotionManagement.css';
 
 const PromotionManagement: React.FC = () => {
+    const { t } = useSettings();
     const [promotions, setPromotions] = useState<Promotion[]>([]);
     const [isEditing, setIsEditing] = useState(false);
     const [currentPromotion, setCurrentPromotion] = useState<Partial<Promotion>>({
@@ -49,7 +51,7 @@ const PromotionManagement: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (window.confirm('Are you sure you want to delete this promotion?')) {
+        if (window.confirm(t('promotions.deleteConfirm'))) {
             await dataService.deletePromotion(id);
             fetchPromotions();
         }
@@ -70,41 +72,41 @@ const PromotionManagement: React.FC = () => {
                     letterSpacing: '-0.02em',
                     textShadow: '0 1px 2px rgba(0,0,0,0.1)',
                     marginBottom: 'var(--space-2)'
-                }}>Promotions & Offers</h2>
+                }}>{t('promotions.title')}</h2>
                 <button className="btn-add" onClick={() => {
                     setIsEditing(true);
                     setCurrentPromotion({ title: '', description: '', active: true, validUntil: '' });
                 }}>
-                    <Plus size={18} /> Add Promotion
+                    <Plus size={18} /> {t('promotions.addPromotion')}
                 </button>
             </div>
 
             {isEditing && (
                 <div className="promo-form-container">
                     <form onSubmit={handleSave} className="promo-form">
-                        <h3>{currentPromotion.id ? 'Edit Promotion' : 'New Promotion'}</h3>
+                        <h3>{currentPromotion.id ? t('promotions.editPromotion') : t('promotions.newPromotion')}</h3>
                         <div className="form-group">
-                            <label>Title</label>
+                            <label>{t('promotions.promotionTitle')}</label>
                             <input
                                 type="text"
                                 value={currentPromotion.title}
                                 onChange={e => setCurrentPromotion({ ...currentPromotion, title: e.target.value })}
-                                placeholder="e.g. Republic Day Special"
+                                placeholder={t('promotions.titlePlaceholder')}
                                 required
                             />
                         </div>
                         <div className="form-group">
-                            <label>Description</label>
+                            <label>{t('promotions.description')}</label>
                             <textarea
                                 value={currentPromotion.description}
                                 onChange={e => setCurrentPromotion({ ...currentPromotion, description: e.target.value })}
-                                placeholder="Describe the offer details..."
+                                placeholder={t('promotions.descPlaceholder')}
                                 required
                             />
                         </div>
                         <div className="form-row">
                             <div className="form-group">
-                                <label>Valid Until (Optional)</label>
+                                <label>{t('promotions.validUntil')} <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>{t('promotions.optional')}</span></label>
                                 <input
                                     type="date"
                                     value={currentPromotion.validUntil?.split('T')[0] || ''}
@@ -118,13 +120,13 @@ const PromotionManagement: React.FC = () => {
                                         checked={currentPromotion.active}
                                         onChange={e => setCurrentPromotion({ ...currentPromotion, active: e.target.checked })}
                                     />
-                                    Active
+                                    {t('promotions.active')}
                                 </label>
                             </div>
                         </div>
                         <div className="form-actions">
-                            <button type="button" className="btn-cancel" onClick={() => setIsEditing(false)}>Cancel</button>
-                            <button type="submit" className="btn-save">Save Promotion</button>
+                            <button type="button" className="btn-cancel" onClick={() => setIsEditing(false)}>{t('common.cancel')}</button>
+                            <button type="submit" className="btn-save">{t('promotions.savePromotion')}</button>
                         </div>
                     </form>
                 </div>
@@ -132,7 +134,7 @@ const PromotionManagement: React.FC = () => {
 
             <div className="promo-list">
                 {promotions.length === 0 ? (
-                    <div className="empty-state">No promotions added yet.</div>
+                    <div className="empty-state">{t('promotions.noPromotions')}</div>
                 ) : (
                     promotions.map(promo => {
                         const isExpired = promo.validUntil && new Date(promo.validUntil) < new Date();
@@ -143,27 +145,27 @@ const PromotionManagement: React.FC = () => {
                                         <h4>{promo.title}</h4>
                                         <div className={`status-badge ${promo.active && !isExpired ? 'active' : 'inactive'}`}>
                                             {promo.active && !isExpired ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                                            {isExpired ? 'Expired' : (promo.active ? 'Active' : 'Inactive')}
+                                            {isExpired ? t('promotions.expired') : (promo.active ? t('promotions.active') : t('promotions.inactive'))}
                                         </div>
                                     </div>
                                     <p>{promo.description}</p>
                                     <div className="promo-card-footer">
-                                        <span className="date-added">Added: {new Date(promo.createdAt).toLocaleDateString()}</span>
+                                        <span className="date-added">{t('promotions.dateAdded')} {new Date(promo.createdAt).toLocaleDateString()}</span>
                                         {promo.validUntil && (
                                             <span className="valid-until">
-                                                <Calendar size={14} /> Valid Until: {new Date(promo.validUntil).toLocaleDateString()}
+                                                <Calendar size={14} /> {t('promotions.validUntilDate')} {new Date(promo.validUntil).toLocaleDateString()}
                                             </span>
                                         )}
                                     </div>
                                 </div>
                                 <div className="promo-card-actions">
-                                    <button className="btn-icon" title="Toggle Status" onClick={() => toggleStatus(promo)}>
+                                    <button className="btn-icon" title={t('common.status')} onClick={() => toggleStatus(promo)}>
                                         {promo.active ? <XCircle size={18} /> : <CheckCircle size={18} />}
                                     </button>
-                                    <button className="btn-icon" title="Edit" onClick={() => handleEdit(promo)}>
+                                    <button className="btn-icon" title={t('common.edit')} onClick={() => handleEdit(promo)}>
                                         <Edit2 size={18} />
                                     </button>
-                                    <button className="btn-icon delete" title="Delete" onClick={() => handleDelete(promo.id)}>
+                                    <button className="btn-icon delete" title={t('common.delete')} onClick={() => handleDelete(promo.id)}>
                                         <Trash2 size={18} />
                                     </button>
                                 </div>

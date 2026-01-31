@@ -145,6 +145,11 @@ export class LocalStorageRepository implements IDataRepository {
         localStorage.setItem(KEYS.PRODUCTS, JSON.stringify(updated));
     }
 
+    async deleteProduct(id: string): Promise<void> {
+        // Not implemented in legacy storage, but safe to ignore or throw
+        throw new Error("Delete not supported in local storage mode");
+    }
+
     // Branch Operations
     async getBranches(): Promise<Branch[]> {
         return (JSON.parse(localStorage.getItem(KEYS.BRANCHES) || '[]') as (Branch | null)[]).filter((b): b is Branch => b !== null);
@@ -257,5 +262,22 @@ export class LocalStorageRepository implements IDataRepository {
         const feedbacks = JSON.parse(localStorage.getItem('tc_feedback') || '[]');
         feedbacks.push({ ...feedback, id: Date.now(), createdAt: new Date().toISOString() });
         localStorage.setItem('tc_feedback', JSON.stringify(feedbacks));
+    }
+
+    // Messaging Operations (Stubs for LocalStorage)
+    async sendMessage(message: Omit<import('../../types').Message, 'id' | 'createdAt' | 'isRead'>): Promise<void> {
+        console.log('Mock sending message:', message);
+    }
+
+    async getMessages(branchId: string): Promise<import('../../types').Message[]> {
+        return [];
+    }
+
+    async getSentMessages(senderRole: string, senderBranchId?: string): Promise<import('../../types').Message[]> {
+        return [];
+    }
+
+    async markMessageAsRead(messageId: string): Promise<void> {
+        console.log('Mock mark read:', messageId);
     }
 }

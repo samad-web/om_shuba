@@ -34,7 +34,10 @@ export class SupabaseRepository implements IDataRepository {
             priceRange: data.price_range,
             demoUrl: data.demo_url,
             active: data.active,
-            branchId: data.branch_id
+            branchId: data.branch_id,
+            nameTa: data.name_ta,
+            categoryTa: data.category_ta,
+            shortDescriptionTa: data.short_description_ta
         };
     }
 
@@ -232,9 +235,41 @@ export class SupabaseRepository implements IDataRepository {
             price_range: product.priceRange,
             demo_url: product.demoUrl,
             active: product.active,
-            branch_id: product.branchId
+            branch_id: product.branchId,
+            name_ta: product.nameTa,
+            category_ta: product.categoryTa,
+            short_description_ta: product.shortDescriptionTa
         }]);
-        if (error) throw error;
+
+        if (error) {
+            // Auto-fix for Duplicate SKU (Constraint 23505)
+            // If SKU exists globaly, we append the branch ID to make it unique for this branch
+            if (error.code === '23505' && product.branchId) {
+                const localizedSku = `${product.sku}-${product.branchId}`;
+
+                const { error: retryError } = await this.supabase.from('products').insert([{
+                    id: product.id,
+                    sku: localizedSku,
+                    name: product.name,
+                    category: product.category,
+                    short_description: product.shortDescription,
+                    price_range: product.priceRange,
+                    demo_url: product.demoUrl,
+                    active: product.active,
+                    branch_id: product.branchId,
+                    name_ta: product.nameTa,
+                    category_ta: product.categoryTa,
+                    short_description_ta: product.shortDescriptionTa
+                }]);
+
+                if (!retryError) {
+                    return;
+                }
+                throw retryError;
+            }
+
+            throw error;
+        }
     }
 
     async updateProduct(product: Product): Promise<void> {
@@ -248,9 +283,17 @@ export class SupabaseRepository implements IDataRepository {
                 price_range: product.priceRange,
                 demo_url: product.demoUrl,
                 active: product.active,
-                branch_id: product.branchId
+                branch_id: product.branchId,
+                name_ta: product.nameTa,
+                category_ta: product.categoryTa,
+                short_description_ta: product.shortDescriptionTa
             })
             .eq('id', product.id);
+        if (error) throw error;
+    }
+
+    async deleteProduct(id: string): Promise<void> {
+        const { error } = await this.supabase.from('products').delete().eq('id', id);
         if (error) throw error;
     }
 
@@ -438,6 +481,75 @@ export class SupabaseRepository implements IDataRepository {
             feedback: feedback.message,
             rating: feedback.rating
         }]);
+        if (error) throw error;
+    }
+
+    // Messaging Operations
+    private mapMessage(data: any): import('../../types').Message {
+        return {
+            id: data.id,
+            senderRole: data.sender_role,
+            senderBranchId: data.sender_branch_id,
+            targetBranchId: data.target_branch_id,
+            content: data.content,
+            createdAt: data.created_at,
+            isRead: data.is_read,
+            senderName: data.sender_name // Add mapping
+        };
+    }
+
+    async sendMessage(message: Omit<import('../../types').Message, 'id' | 'createdAt' | 'isRead'>): Promise<void> {
+        const { error } = await this.supabase.from('branch_messages').insert([{
+            sender_role: message.senderRole,
+            sender_branch_id: message.senderBranchId || null,
+            sender_name: (message as any).senderName || null, // Add to insert
+            target_branch_id: message.targetBranchId,
+            content: message.content
+        }]);
+        if (error) throw error;
+    }
+
+    async getMessages(branchId: string): Promise<import('../../types').Message[]> {
+        let query = this.supabase
+            .from('branch_messages')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (branchId !== 'all') {
+            query = query.or(`target_branch_id.eq.${branchId},target_branch_id.eq.all`);
+        } else {
+            // Admin view: fetch all messages where target is 'admin' OR just all messages?
+            // Usually Inbox = messages sent TO me.
+            // If I am admin, I want to see messages sent to 'admin'.
+            query = query.eq('target_branch_id', 'admin');
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return (data || []).map(this.mapMessage);
+    }
+
+    async getSentMessages(senderRole: string, senderBranchId?: string): Promise<import('../../types').Message[]> {
+        let query = this.supabase
+            .from('branch_messages')
+            .select('*')
+            .eq('sender_role', senderRole)
+            .order('created_at', { ascending: false });
+
+        if (senderRole === 'branch_admin' && senderBranchId) {
+            query = query.eq('sender_branch_id', senderBranchId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return (data || []).map(this.mapMessage);
+    }
+
+    async markMessageAsRead(messageId: string): Promise<void> {
+        const { error } = await this.supabase
+            .from('branch_messages')
+            .update({ is_read: true })
+            .eq('id', messageId);
         if (error) throw error;
     }
 }

@@ -4,6 +4,7 @@ import { dataService } from '../../services/DataService';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
+import { useSettings } from '../../context/SettingsContext';
 
 interface EnquiryLogProps {
     role?: 'telecaller' | 'admin' | 'branch_admin';
@@ -15,6 +16,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
     const { user } = useAuth();
     const { confirm } = useConfirm();
     const { showToast } = useToast();
+    const { t, language } = useSettings();
     const [loading, setLoading] = useState(true);
 
     // Filters
@@ -40,7 +42,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
             setProducts(productsData);
         } catch (error) {
             console.error("Failed to load data", error);
-            showToast('Failed to load data', 'error');
+            showToast(t('common.loading') + ' ' + t('common.error'), 'error');
         } finally {
             setLoading(false);
         }
@@ -50,20 +52,20 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
         if (!user) return;
 
         let amount: number | undefined = undefined;
-        let notes: string | undefined = undefined; // Asking for notes on change? Maybe not in this UI.
+        let notes: string | undefined = undefined;
 
         if (newStage === 'Closed-Converted') {
-            const input = window.prompt("Enter Final Sale Amount (₹):");
+            const input = window.prompt(t('enquiries.enterSaleAmount'));
             if (input === null) return; // User cancelled
             amount = parseFloat(input) || 0;
             // Maybe ask for notes too?
-            const notesInput = window.prompt("Optional notes:");
+            const notesInput = window.prompt(t('enquiries.optionalNotes'));
             if (notesInput) notes = notesInput;
         }
 
         try {
             await dataService.updateEnquiryStage(id, newStage, user.id, notes, amount);
-            showToast('Stage updated successfully', 'success');
+            showToast(t('enquiries.stageUpdateSuccess'), 'success');
             loadData(); // Reload to see changes
         } catch (error) {
             console.error("Failed to update stage", error);
@@ -73,17 +75,17 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
 
     const handleDelete = async (id: string, name: string) => {
         const confirmed = await confirm({
-            title: 'Delete Lead',
-            message: `Are you sure you want to delete the lead for "${name}"? This action cannot be undone.`,
-            confirmText: 'Delete',
-            cancelText: 'Cancel',
+            title: t('enquiries.deleteTitle'),
+            message: t('enquiries.deleteConfirm').replace('{0}', name),
+            confirmText: t('common.delete'),
+            cancelText: t('common.cancel'),
             danger: true
         });
 
         if (confirmed) {
             try {
                 await dataService.deleteEnquiry(id);
-                showToast('Lead deleted successfully', 'success');
+                showToast(t('enquiries.deleteSuccess'), 'success');
                 loadData();
             } catch (error) {
                 console.error("Failed to delete enquiry", error);
@@ -107,46 +109,72 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
         return true;
     });
 
-    if (loading) return <div>Loading data...</div>;
+    const getStageLabel = (stage: string) => {
+        switch (stage) {
+            case 'New': return t('stages.new');
+            case 'Qualified': return t('stages.qualified');
+            case 'Forwarded': return t('stages.forwarded');
+            case 'Contacted': return t('stages.contacted');
+            case 'Demo Scheduled': return t('stages.demoScheduled');
+            case 'Visit Scheduled': return t('stages.visitScheduled');
+            case 'Demo/Visit Done': return t('stages.demoVisitDone');
+            case 'Delivery Scheduled': return t('stages.deliveryScheduled');
+            case 'Delivered': return t('stages.delivered');
+            case 'Closed-Converted': return t('stages.closedConverted');
+            case 'Closed-Not Interested': return t('stages.closedNotInterested');
+            default: return stage;
+        }
+    };
+
+    const getIntentLabel = (intent: string) => {
+        switch (intent) {
+            case 'Ready to Buy': return t('intent.readyToBuy');
+            case 'Needs Demo': return t('intent.needsDemo');
+            case 'General Enquiry': return t('intent.generalEnquiry');
+            default: return intent;
+        }
+    };
+
+    if (loading) return <div>{t('common.loading')}</div>;
 
     return (
         <div>
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
-                <h3>Enquiry Log {user?.role === 'branch_admin' && user.branchId && <span style={{ color: '#059669', fontWeight: 'normal' }}>({branches.find(b => b.id === user.branchId)?.name})</span>}</h3>
+                <h3>{t('enquiries.title')} {user?.role === 'branch_admin' && user.branchId && <span style={{ color: '#059669', fontWeight: 'normal' }}>({branches.find(b => b.id === user.branchId)?.name})</span>}</h3>
                 <select className="input" style={{ width: 'auto' }} value={filterStage} onChange={e => setFilterStage(e.target.value)}>
-                    <option value="">All Stages</option>
-                    <option value="New">New</option>
-                    <option value="Qualified">Qualified</option>
-                    <option value="Forwarded">Forwarded</option>
-                    <option value="Contacted">Contacted</option>
-                    <option value="Demo Scheduled">Demo Scheduled</option>
-                    <option value="Visit Scheduled">Visit Scheduled</option>
-                    <option value="Demo/Visit Done">Demo/Visit Done</option>
-                    <option value="Delivery Scheduled">Delivery Scheduled</option>
-                    <option value="Delivered">Delivered</option>
-                    <option value="Closed-Converted">Closed-Converted</option>
-                    <option value="Closed-Not Interested">Closed-Not Interested</option>
+                    <option value="">{t('enquiries.allStages')}</option>
+                    <option value="New">{t('stages.new')}</option>
+                    <option value="Qualified">{t('stages.qualified')}</option>
+                    <option value="Forwarded">{t('stages.forwarded')}</option>
+                    <option value="Contacted">{t('stages.contacted')}</option>
+                    <option value="Demo Scheduled">{t('stages.demoScheduled')}</option>
+                    <option value="Visit Scheduled">{t('stages.visitScheduled')}</option>
+                    <option value="Demo/Visit Done">{t('stages.demoVisitDone')}</option>
+                    <option value="Delivery Scheduled">{t('stages.deliveryScheduled')}</option>
+                    <option value="Delivered">{t('stages.delivered')}</option>
+                    <option value="Closed-Converted">{t('stages.closedConverted')}</option>
+                    <option value="Closed-Not Interested">{t('stages.closedNotInterested')}</option>
                 </select>
                 {user?.role !== 'branch_admin' && (
                     <select className="input" style={{ width: 'auto' }} value={filterBranch} onChange={e => setFilterBranch(e.target.value)}>
-                        <option value="">All Branches</option>
+                        <option value="">{t('enquiries.allBranches')}</option>
                         {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                 )}
-                <button className="btn" onClick={loadData}>Refresh</button>
+                <button className="btn" onClick={loadData}>{t('enquiries.refresh')}</button>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                     <thead>
                         <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)' }}>
-                            <th style={{ padding: '0.75rem' }}>Date</th>
-                            <th style={{ padding: '0.75rem' }}>Customer</th>
-                            <th style={{ padding: '0.75rem' }}>Product</th>
-                            <th style={{ padding: '0.75rem' }}>Branch</th>
-                            <th style={{ padding: '0.75rem' }}>Stage</th>
-                            <th style={{ padding: '0.75rem' }}>Intent</th>
-                            <th style={{ padding: '0.75rem', textAlign: 'center' }}>Actions</th>
+                            <th style={{ padding: '0.75rem' }}>{t('enquiries.date')}</th>
+                            <th style={{ padding: '0.75rem' }}>{t('enquiries.customerName')}</th>
+                            <th style={{ padding: '0.75rem' }}>{t('enquiries.product')}</th>
+                            <th style={{ padding: '0.75rem' }}>{t('enquiries.branch')}</th>
+                            <th style={{ padding: '0.75rem' }}>{t('enquiries.stage')}</th>
+                            <th style={{ padding: '0.75rem' }}>{t('enquiries.intent')}</th>
+                            <th style={{ padding: '0.75rem', textAlign: 'center' }}>{t('common.actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -161,7 +189,11 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{e.phoneNumber}</div>
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
-                                    {products.find(p => p.id === e.productId)?.name || e.productId}
+                                    {(() => {
+                                        const product = products.find(p => p.id === e.productId);
+                                        if (!product) return e.productId;
+                                        return language === 'ta' ? (product.nameTa || product.name) : product.name;
+                                    })()}
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
                                     {branches.find(b => b.id === e.branchId)?.name || 'N/A'}
@@ -172,17 +204,14 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                                         onChange={(ev) => handleStageChange(e.id, ev.target.value as PipelineStage)}
                                         style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', fontSize: '0.85rem' }}
                                     >
-                                        <option value="New">New</option>
-                                        <option value="Qualified">Qualified</option>
-                                        <option value="Forwarded">Forwarded</option>
-                                        <option value="Contacted">Contacted</option>
-                                        <option value="Demo Scheduled">Demo Scheduled</option>
-                                        <option value="Visit Scheduled">Visit Scheduled</option>
-                                        <option value="Demo/Visit Done">Demo/Visit Done</option>
-                                        <option value="Delivery Scheduled">Delivery Scheduled</option>
-                                        <option value="Delivered">Delivered</option>
-                                        <option value="Closed-Converted">Closed-Converted</option>
-                                        <option value="Closed-Not Interested">Closed-Not Interested</option>
+                                        {[
+                                            'New', 'Qualified', 'Forwarded', 'Contacted',
+                                            'Demo Scheduled', 'Visit Scheduled', 'Demo/Visit Done',
+                                            'Delivery Scheduled', 'Delivered', 'Closed-Converted',
+                                            'Closed-Not Interested'
+                                        ].map(stage => (
+                                            <option key={stage} value={stage}>{getStageLabel(stage)}</option>
+                                        ))}
                                     </select>
                                     {e.tracking && e.tracking.status === 'Scheduled' && (
                                         <div style={{ fontSize: '0.75rem', marginTop: '0.4rem', color: '#ea580c', fontWeight: 500 }}>
@@ -191,7 +220,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                                     )}
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
-                                    <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'var(--bg-secondary)' }}>{e.purchaseIntent}</span>
+                                    <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'var(--bg-secondary)' }}>{getIntentLabel(e.purchaseIntent)}</span>
                                 </td>
                                 <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                                     <button
@@ -209,7 +238,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                                             margin: '0 auto',
                                             transition: 'all 0.2s'
                                         }}
-                                        title="Delete Lead"
+                                        title={t('enquiries.deleteTitle')}
                                         onMouseOver={(e) => e.currentTarget.style.background = '#fee2e2'}
                                         onMouseOut={(e) => e.currentTarget.style.background = '#fef2f2'}
                                     >
@@ -219,7 +248,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                             </tr>
                         ))}
                         {filteredEnquiries.length === 0 && (
-                            <tr><td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No enquiries found</td></tr>
+                            <tr><td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>{t('enquiries.noEnquiries')}</td></tr>
                         )}
                     </tbody>
                 </table>

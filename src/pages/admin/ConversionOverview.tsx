@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import type { Enquiry } from '../../types';
 import { dataService } from '../../services/DataService';
+import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 
 const ConversionOverview: React.FC = () => {
     const { user } = useAuth();
+    const { t } = useSettings();
     const [deals, setDeals] = useState<Enquiry[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [stats, setStats] = useState({ totalValue: 0, count: 0, avgValue: 0 });
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         loadData();
     }, [user]);
 
     const loadData = async () => {
-        setLoading(true);
         try {
             const [allEnquiries, allProducts] = await Promise.all([
                 dataService.getEnquiries(),
@@ -43,8 +43,6 @@ const ConversionOverview: React.FC = () => {
             });
         } catch (error) {
             console.error("Failed to load conversion data", error);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -53,15 +51,15 @@ const ConversionOverview: React.FC = () => {
             {/* Header Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
                 <div className="card" style={{ background: 'linear-gradient(135deg, #064e3b, #15803d)', color: 'white' }}>
-                    <div style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '0.5rem' }}>Total Closed Volume</div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '0.5rem' }}>{t('metrics.totalClosedVolume')}</div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>₹{stats.totalValue.toLocaleString()}</div>
                 </div>
                 <div className="card">
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Deals Closed</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t('metrics.dealsClosed')}</div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary)' }}>{stats.count}</div>
                 </div>
                 <div className="card">
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Average Deal Value</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t('metrics.avgDealValue')}</div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0369a1' }}>₹{stats.avgValue.toLocaleString()}</div>
                 </div>
             </div>
@@ -69,18 +67,18 @@ const ConversionOverview: React.FC = () => {
             {/* Deals List */}
             <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h4 style={{ fontWeight: 800 }}>Recent Converted Deals</h4>
-                    <button className="btn" onClick={loadData} style={{ fontSize: '0.75rem' }}>🔄 Refresh</button>
+                    <h4 style={{ fontWeight: 800 }}>{t('metrics.recentConvertedDeals')}</h4>
+                    <button className="btn" onClick={loadData} style={{ fontSize: '0.75rem' }}>🔄 {t('common.refresh')}</button>
                 </div>
 
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)', borderBottom: '2px solid var(--border)' }}>
-                                <th style={{ padding: '1rem 0.5rem' }}>Date</th>
-                                <th style={{ padding: '1rem 0.5rem' }}>Customer</th>
-                                <th style={{ padding: '1rem 0.5rem' }}>Product</th>
-                                <th style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>Final Amount</th>
+                                <th style={{ padding: '1rem 0.5rem' }}>{t('metrics.date')}</th>
+                                <th style={{ padding: '1rem 0.5rem' }}>{t('metrics.customer')}</th>
+                                <th style={{ padding: '1rem 0.5rem' }}>{t('metrics.product')}</th>
+                                <th style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>{t('metrics.finalAmount')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -104,7 +102,7 @@ const ConversionOverview: React.FC = () => {
                             {deals.length === 0 && (
                                 <tr>
                                     <td colSpan={4} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                        No deals converted yet. Keep pushing! 🚜
+                                        {t('metrics.noDealsYet')}
                                     </td>
                                 </tr>
                             )}

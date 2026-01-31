@@ -21,9 +21,18 @@ export const MOCK_BRANCHES: Branch[] = [
 
 export const MOCK_PRODUCTS: Product[] = [
     // CATEGORY 1: WEEDERS - Power Weeders
-    { id: 'p1', sku: 'PW-P-075', name: 'Power Weeder – 7.5 HP Petrol', category: 'Weeders', shortDescription: '7.5 HP Petrol powered weeder', priceRange: '₹45,000 - ₹55,000', active: true },
-    { id: 'p2', sku: 'PW-D-075', name: 'Power Weeder – 7.5 HP Diesel', category: 'Weeders', shortDescription: '7.5 HP Diesel powered weeder', priceRange: '₹48,000 - ₹58,000', active: true },
-    { id: 'p3', sku: 'PW-D-075S', name: 'Power Weeder – 7.5 HP Diesel (Self Start)', category: 'Weeders', shortDescription: '7.5 HP Diesel with self-start feature', priceRange: '₹52,000 - ₹62,000', active: true },
+    {
+        id: 'p1', sku: 'PW-P-075', name: 'Power Weeder – 7.5 HP Petrol', category: 'Weeders', shortDescription: '7.5 HP Petrol powered weeder', priceRange: '₹45,000 - ₹55,000', active: true,
+        nameTa: 'பவர் வீடர் – 7.5 ஹெச்பி பெட்ரோல்', categoryTa: 'களை எடுக்கும் இயந்திரம்', shortDescriptionTa: '7.5 ஹெச்பி பெட்ரோல் மூலம் இயங்கும் வீடர்'
+    },
+    {
+        id: 'p2', sku: 'PW-D-075', name: 'Power Weeder – 7.5 HP Diesel', category: 'Weeders', shortDescription: '7.5 HP Diesel powered weeder', priceRange: '₹48,000 - ₹58,000', active: true,
+        nameTa: 'பவர் வீடர் – 7.5 ஹெச்பி டீசல்', categoryTa: 'களை எடுக்கும் இயந்திரம்', shortDescriptionTa: '7.5 ஹெச்பி டீசல் மூலம் இயங்கும் வீடர்'
+    },
+    {
+        id: 'p3', sku: 'PW-D-075S', name: 'Power Weeder – 7.5 HP Diesel (Self Start)', category: 'Weeders', shortDescription: '7.5 HP Diesel with self-start feature', priceRange: '₹52,000 - ₹62,000', active: true,
+        nameTa: 'பவர் வீடர் – 7.5 ஹெச்பி டீசல் (செல்ஃப் ஸ்டார்ட்)', categoryTa: 'களை எடுக்கும் இயந்திரம்', shortDescriptionTa: 'சுய தொடக்க வசதியுடன் 7.5 ஹெச்பி டீசல்'
+    },
     { id: 'p4', sku: 'PW-D-090', name: 'Power Weeder – 9 HP Diesel', category: 'Weeders', shortDescription: '9 HP Diesel powered weeder', priceRange: '₹55,000 - ₹65,000', active: true },
     { id: 'p5', sku: 'PW-BR-065', name: 'Power Weeder – 6.5 HP Diesel with Back Rotavator', category: 'Weeders', shortDescription: '6.5 HP with back rotavator attachment', priceRange: '₹58,000 - ₹68,000', active: true },
     { id: 'p6', sku: 'PW-BR-090', name: 'Power Weeder – 9 HP with Back Rotavator', category: 'Weeders', shortDescription: '9 HP with back rotavator attachment', priceRange: '₹62,000 - ₹72,000', active: true },
@@ -46,10 +55,22 @@ export const MOCK_PRODUCTS: Product[] = [
     { id: 'p15', sku: 'RT-CAP-36-B', name: 'Rotavator Capital – 36 Blade (Model B)', category: 'Rotavators', shortDescription: 'Capital 36 blade Model B', priceRange: '₹39,000 - ₹49,000', active: true },
 
     // CATEGORY 3: CUTTERS - Chop Cutters
-    { id: 'p16', sku: 'CC-01-NG', name: 'Chop Cutter – Model 1 (Without Gear)', category: 'Cutters', shortDescription: 'Model 1 without gear mechanism', priceRange: '₹8,000 - ₹12,000', active: true },
-    { id: 'p17', sku: 'CC-02-WG', name: 'Chop Cutter – Model 2 (With Gear)', category: 'Cutters', shortDescription: 'Model 2 with gear mechanism', priceRange: '₹12,000 - ₹16,000', active: true },
-    { id: 'p18', sku: 'CC-EL-05B', name: 'Chop Cutter – Elite Model (5 Blade)', category: 'Cutters', shortDescription: 'Elite model with 5 blade system', priceRange: '₹15,000 - ₹20,000', active: true },
-    { id: 'p19', sku: 'CC-PR', name: 'Chop Cutter – Premium Model', category: 'Cutters', shortDescription: 'Premium chop cutter model', priceRange: '₹18,000 - ₹24,000', active: true },
+    {
+        id: 'p16', sku: 'CC-01-NG', name: 'Chop Cutter – Model 1 (Without Gear)', category: 'Cutters', shortDescription: 'Model 1 without gear mechanism', priceRange: '₹8,000 - ₹12,000', active: true,
+        nameTa: 'சாப் கட்டர் - மாடல் 1 (கியர் இல்லாமல்)', categoryTa: 'கட்டர்கள்', shortDescriptionTa: 'கியர் வழிமுறை இல்லாமல் மாடல் 1'
+    },
+    {
+        id: 'p17', sku: 'CC-02-WG', name: 'Chop Cutter – Model 2 (With Gear)', category: 'Cutters', shortDescription: 'Model 2 with gear mechanism', priceRange: '₹12,000 - ₹16,000', active: true,
+        nameTa: 'சாப் கட்டர் - மாடல் 2 (கியருடன்)', categoryTa: 'கட்டர்கள்', shortDescriptionTa: 'கியர் பொறிமுறையுடன் மாடல் 2'
+    },
+    {
+        id: 'p18', sku: 'CC-EL-05B', name: 'Chop Cutter – Elite Model (5 Blade)', category: 'Cutters', shortDescription: 'Elite model with 5 blade system', priceRange: '₹15,000 - ₹20,000', active: true,
+        nameTa: 'சாப் கட்டர் - எலைட் மாடல் (5 பிளேடு)', categoryTa: 'கட்டர்கள்', shortDescriptionTa: '5 பிளேடு அமைப்புடன் கூடிய எலைட் மாடல்'
+    },
+    {
+        id: 'p19', sku: 'CC-PR', name: 'Chop Cutter – Premium Model', category: 'Cutters', shortDescription: 'Premium chop cutter model', priceRange: '₹18,000 - ₹24,000', active: true,
+        nameTa: 'சாப் கட்டர் - பிரீமியம் மாடல்', categoryTa: 'கட்டர்கள்', shortDescriptionTa: 'பிரீமியம் சாப் கட்டர் மாடல்'
+    },
 
     // CATEGORY 4: DAIRY / MILKING MACHINES
     { id: 'p20', sku: 'MM-NANO', name: 'Milking Machine – Nano Model', category: 'Dairy Equipment', shortDescription: 'Compact Nano milking machine', priceRange: '₹22,000 - ₹28,000', active: true },

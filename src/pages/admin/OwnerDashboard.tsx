@@ -14,14 +14,22 @@ import { migrationService } from '../../services/MigrationService';
 import { downloadBusinessReport } from '../../services/excelService';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../components/Toast';
+import { useAuth } from '../../context/AuthContext';
+import { AdminMessaging, BranchMessaging } from '../../components/dashboard/Messaging';
 
 const OwnerDashboard: React.FC = () => {
     const { t } = useSettings();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [hasLocalData, setHasLocalData] = useState(false);
+    const { showToast } = useToast();
+
+    // Messaging State
+    const [showMessaging, setShowMessaging] = useState(false);
+
     const [metrics, setMetrics] = useState({
         activePipeline: 0,
         conversionRate: 0,
@@ -41,8 +49,6 @@ const OwnerDashboard: React.FC = () => {
         calculateMetrics();
         setHasLocalData(migrationService.hasLocalData());
     }, []);
-
-    const { showToast } = useToast();
 
     const handleSync = async () => {
         if (!window.confirm("This will upload all local data to Supabase. Records with duplicate IDs will be skipped. Progress?")) return;
@@ -65,7 +71,6 @@ const OwnerDashboard: React.FC = () => {
         if (exportData) {
             downloadBusinessReport(exportData.enquiries, exportData.products, exportData.branches);
         } else {
-            // Fallback if data not yet loaded or if we want to ensure fresh data
             const [enquiries, products, branches] = await Promise.all([
                 dataService.getEnquiries(),
                 dataService.getProducts(),
@@ -86,27 +91,27 @@ const OwnerDashboard: React.FC = () => {
 
             setExportData({ enquiries, products, branches });
 
-            // 1. Total Active Pipeline (Excluding delivered/closed)
+            // 1. Total Active Pipeline
             const active = enquiries.filter(e => !['Delivered', 'Closed-Not Interested', 'Closed-Converted'].includes(e.pipelineStage));
 
-            // 2. Conversion Rate (Converted / Total ever)
+            // 2. Conversion Rate
             const converted = enquiries.filter(e => e.pipelineStage === 'Closed-Converted').length;
             const total = enquiries.length || 1;
             const convRate = Math.round((converted / total) * 100);
 
-            // 3. Demo Fulfillment (% of scheduled demos that are 'Done')
+            // 3. Demo Fulfillment
             const scheduled = enquiries.filter(e => ['Demo Scheduled', 'Visit Scheduled', 'Demo/Visit Done'].includes(e.pipelineStage)).length;
             const done = enquiries.filter(e => e.pipelineStage === 'Demo/Visit Done').length;
             const fulfillment = scheduled > 0 ? Math.round((done / scheduled) * 100) : 100;
 
-            // 4. Action Urgency (Scheduled for TODAY)
+            // 4. Action Urgency
             const todayStr = new Date().toLocaleDateString();
             const urgent = enquiries.filter(e =>
                 e.tracking?.status === 'Scheduled' &&
                 new Date(e.tracking.scheduledDate).toLocaleDateString() === todayStr
             ).length;
 
-            // 5. Lead Quality (% Qualified vs Total)
+            // 5. Lead Quality
             const qualified = enquiries.filter(e => !['New'].includes(e.pipelineStage)).length;
             const qualityIndex = Math.round((qualified / total) * 100);
 
@@ -130,7 +135,7 @@ const OwnerDashboard: React.FC = () => {
                 percent: Math.round((count / maxSales) * 100)
             }));
 
-            // 7. Branch Density (Enquiries per branch)
+            // 7. Branch Density
             const branchCounts: Record<string, number> = {};
             enquiries.forEach(e => { branchCounts[e.branchId] = (branchCounts[e.branchId] || 0) + 1; });
             const topBranchEntry = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0];
@@ -156,20 +161,13 @@ const OwnerDashboard: React.FC = () => {
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'products':
-                return <div className="card" style={{ height: 'auto' }}><ProductMaster /></div>;
-            case 'branches':
-                return <div className="card" style={{ height: 'auto' }}><BranchMaster /></div>;
-            case 'enquiries':
-                return <div className="card" style={{ height: 'auto' }}><EnquiryLog /></div>;
-            case 'conversions':
-                return <ConversionOverview />;
-            case 'users':
-                return <div className="card" style={{ height: 'auto' }}><UserManagement /></div>;
-            case 'settings':
-                return <div className="card" style={{ height: 'auto' }}><AccountSettings /></div>;
-            case 'promotions':
-                return <div className="card" style={{ height: 'auto' }}><PromotionManagement /></div>;
+            case 'products': return <div className="card" style={{ height: 'auto' }}><ProductMaster /></div>;
+            case 'branches': return <div className="card" style={{ height: 'auto' }}><BranchMaster /></div>;
+            case 'enquiries': return <div className="card" style={{ height: 'auto' }}><EnquiryLog /></div>;
+            case 'conversions': return <ConversionOverview />;
+            case 'users': return <div className="card" style={{ height: 'auto' }}><UserManagement /></div>;
+            case 'settings': return <div className="card" style={{ height: 'auto' }}><AccountSettings /></div>;
+            case 'promotions': return <div className="card" style={{ height: 'auto' }}><PromotionManagement /></div>;
             case 'dashboard':
             default:
                 return (
@@ -179,7 +177,23 @@ const OwnerDashboard: React.FC = () => {
                                 <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem' }}>{t('login.title')} {t('nav.dashboard')}</h2>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Business health and operations monitoring</p>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                {/* Messaging Icon */}
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        className="btn"
+                                        style={{ padding: '0.5rem', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}
+                                        onClick={() => setShowMessaging(!showMessaging)}
+                                    >
+                                        💬
+                                    </button>
+                                    {showMessaging && (
+                                        user?.role === 'admin'
+                                            ? <AdminMessaging onClose={() => setShowMessaging(false)} align="right" />
+                                            : <BranchMessaging onClose={() => setShowMessaging(false)} align="right" />
+                                    )}
+                                </div>
+
                                 {hasLocalData && (
                                     <button
                                         className="btn"

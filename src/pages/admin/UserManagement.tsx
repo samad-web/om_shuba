@@ -3,10 +3,12 @@ import type { User, UserRole, Branch } from '../../types';
 import { dataService } from '../../services/DataService';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
+import { useSettings } from '../../context/SettingsContext';
 
 const UserManagement: React.FC = () => {
     const { confirm } = useConfirm();
     const { showToast } = useToast();
+    const { t } = useSettings();
     const [users, setUsers] = useState<User[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [isAdding, setIsAdding] = useState(false);
@@ -35,7 +37,7 @@ const UserManagement: React.FC = () => {
             setBranches(branchesData);
         } catch (error) {
             console.error("Failed to load data", error);
-            showToast('Failed to load data', 'error');
+            showToast(t('common.loading') + ' ' + t('common.error'), 'error');
         } finally {
             setLoading(false);
         }
@@ -49,7 +51,7 @@ const UserManagement: React.FC = () => {
                 // If password is provided, update it
                 if (password) updated.password = password;
                 await dataService.updateUser(updated);
-                showToast('User updated successfully', 'success');
+                showToast(t('users.updateSuccess'), 'success');
             } else {
                 const newUser: User = {
                     id: 'u' + Date.now(),
@@ -60,7 +62,7 @@ const UserManagement: React.FC = () => {
                     branchId: role === 'admin' ? undefined : branchId
                 };
                 await dataService.addUser(newUser);
-                showToast('User created successfully', 'success');
+                showToast(t('users.createSuccess'), 'success');
             }
 
             resetForm();
@@ -93,10 +95,10 @@ const UserManagement: React.FC = () => {
 
     const handleDelete = async (id: string, name: string) => {
         const confirmed = await confirm({
-            title: 'Delete User',
-            message: `Delete staff account for "${name}"? This cannot be undone.`,
-            confirmText: 'Delete',
-            cancelText: 'Cancel',
+            title: t('users.deleteTitle'),
+            message: t('users.deleteConfirm').replace('{0}', name),
+            confirmText: t('common.delete'),
+            cancelText: t('common.cancel'),
             danger: true
         });
 
@@ -104,7 +106,7 @@ const UserManagement: React.FC = () => {
             try {
                 await dataService.deleteUser(id);
                 loadData();
-                showToast('User deleted successfully', 'success');
+                showToast(t('users.deleteSuccess'), 'success');
             } catch (error) {
                 console.error("Failed to delete user", error);
                 showToast('Failed to delete user', 'error');
@@ -112,51 +114,58 @@ const UserManagement: React.FC = () => {
         }
     };
 
-    if (loading) return <div>Loading users...</div>;
+    const getRoleLabel = (r: string) => {
+        if (r === 'admin') return t('users.adminRole');
+        if (r === 'branch_admin') return t('users.branchAdminRole');
+        if (r === 'telecaller') return t('users.telecallerRole');
+        return r;
+    };
+
+    if (loading) return <div>{t('common.loading')}</div>;
 
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Staff Management</h3>
-                {!isAdding && <button className="btn btn-primary" onClick={() => setIsAdding(true)}>+ New Account</button>}
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{t('users.title')}</h3>
+                {!isAdding && <button className="btn btn-primary" onClick={() => setIsAdding(true)}>+ {t('users.newAccount')}</button>}
             </div>
 
             {isAdding && (
                 <div className="card" style={{ marginBottom: '2rem', background: 'var(--bg-secondary)', border: '2px solid var(--primary-light)' }}>
-                    <h4 style={{ marginBottom: '1.5rem' }}>{editingUser ? 'Edit Account' : 'Create New Account'}</h4>
+                    <h4 style={{ marginBottom: '1.5rem' }}>{editingUser ? t('users.editAccount') : t('users.addUser')}</h4>
                     <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Username *</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('users.userName')} *</label>
                             <input className="input" required value={username} onChange={e => setUsername(e.target.value)} />
                         </div>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{editingUser ? 'New Password (Optional)' : 'Password *'}</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{editingUser ? t('users.newPassword') : t('users.password') + ' *'}</label>
                             <input className="input" required={!editingUser} type="password" value={password} onChange={e => setPassword(e.target.value)} />
                         </div>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Full Name *</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('users.fullName')} *</label>
                             <input className="input" required value={name} onChange={e => setName(e.target.value)} />
                         </div>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Role *</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('users.role')} *</label>
                             <select className="input" required value={role} onChange={e => setRole(e.target.value as UserRole)}>
-                                <option value="admin">Owner / Regional Head</option>
-                                <option value="branch_admin">Branch Admin</option>
-                                <option value="telecaller">Telecaller</option>
+                                <option value="admin">{t('users.adminRole')}</option>
+                                <option value="branch_admin">{t('users.branchAdminRole')}</option>
+                                <option value="telecaller">{t('users.telecallerRole')}</option>
                             </select>
                         </div>
                         {role !== 'admin' && (
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Branch Assignment *</label>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('users.branchAssignment')} *</label>
                                 <select className="input" required value={branchId} onChange={e => setBranchId(e.target.value)}>
-                                    <option value="">Select Branch</option>
+                                    <option value="">{t('users.selectBranch')}</option>
                                     {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                 </select>
                             </div>
                         )}
                         <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                            <button type="button" className="btn" onClick={resetForm}>Cancel</button>
-                            <button type="submit" className="btn btn-primary">{editingUser ? 'Update Account' : 'Create Account'}</button>
+                            <button type="button" className="btn" onClick={resetForm}>{t('common.cancel')}</button>
+                            <button type="submit" className="btn btn-primary">{editingUser ? t('users.updateUser') : t('users.addUser')}</button>
                         </div>
                     </form>
                 </div>
@@ -165,11 +174,11 @@ const UserManagement: React.FC = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                     <tr style={{ textAlign: 'left', background: 'var(--bg-table-header)' }}>
-                        <th style={{ padding: '1rem' }}>Name</th>
-                        <th style={{ padding: '1rem' }}>Username</th>
-                        <th style={{ padding: '1rem' }}>Role</th>
-                        <th style={{ padding: '1rem' }}>Branch</th>
-                        <th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th>
+                        <th style={{ padding: '1rem' }}>{t('users.fullName')}</th>
+                        <th style={{ padding: '1rem' }}>{t('users.userName')}</th>
+                        <th style={{ padding: '1rem' }}>{t('users.role')}</th>
+                        <th style={{ padding: '1rem' }}>{t('enquiries.branch')}</th>
+                        <th style={{ padding: '1rem', textAlign: 'right' }}>{t('common.actions')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -186,16 +195,16 @@ const UserManagement: React.FC = () => {
                                     background: u.role === 'admin' ? '#fef3c7' : u.role === 'branch_admin' ? '#e0f2fe' : '#dcfce7',
                                     color: u.role === 'admin' ? '#92400e' : u.role === 'branch_admin' ? '#075985' : '#166534'
                                 }}>
-                                    {u.role.replace('_', ' ')}
+                                    {getRoleLabel(u.role)}
                                 </span>
                             </td>
                             <td style={{ padding: '1rem' }}>
-                                {branches.find(b => b.id === u.branchId)?.name || 'Central Command'}
+                                {branches.find(b => b.id === u.branchId)?.name || t('users.centralCommand')}
                             </td>
                             <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                <button className="btn" onClick={() => startEdit(u)} style={{ marginRight: '0.5rem' }}>Edit</button>
+                                <button className="btn" onClick={() => startEdit(u)} style={{ marginRight: '0.5rem' }}>{t('common.edit')}</button>
                                 {u.username !== 'owner' && (
-                                    <button className="btn" onClick={() => handleDelete(u.id, u.name)} style={{ color: '#dc2626' }}>Delete</button>
+                                    <button className="btn" onClick={() => handleDelete(u.id, u.name)} style={{ color: '#dc2626' }}>{t('common.delete')}</button>
                                 )}
                             </td>
                         </tr>

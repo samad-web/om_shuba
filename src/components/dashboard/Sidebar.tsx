@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
+import { dataService } from '../../services/DataService';
 
 interface SidebarProps {
     activeTab: string;
@@ -12,6 +13,31 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
     const { user } = useAuth();
     const { t } = useSettings();
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [branchName, setBranchName] = useState('');
+
+    useEffect(() => {
+        const fetchBranchName = async () => {
+            if (user?.role === 'admin') {
+                setBranchName('HEAD OFFICE');
+            } else if (user?.role === 'branch_admin' && user.branchId) {
+                try {
+                    const branch = await dataService.getBranchById(user.branchId);
+                    if (branch) {
+                        setBranchName(branch.name);
+                    } else {
+                        setBranchName('BRANCH ADMIN');
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch branch name", error);
+                    setBranchName('BRANCH ADMIN');
+                }
+            } else {
+                // Fallback for other roles like telecaller
+                setBranchName('OM SHUBA TEAM');
+            }
+        };
+        fetchBranchName();
+    }, [user]);
 
     const getNavItems = () => {
         if (user?.role === 'admin') {
@@ -78,7 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                         OM SHUBA
                     </h2>
                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                        Branch Admin
+                        {branchName}
                     </span>
                 </div>
             )}
