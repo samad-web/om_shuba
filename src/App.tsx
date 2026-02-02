@@ -22,9 +22,7 @@ function App() {
       <ToastProvider>
         <LoadingProvider>
           <ConfirmProvider>
-            <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999 }}>
-              <SettingsToggle />
-            </div>
+
             <Router>
               <AuthProvider>
                 <Routes>

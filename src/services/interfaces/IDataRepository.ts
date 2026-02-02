@@ -13,6 +13,7 @@ export interface IDataRepository {
     updateUser(user: User): Promise<void>;
     deleteUser(id: string): Promise<void>;
     login(username: string, password: string): Promise<User | null>;
+    logout(): Promise<void>;
 
     // Product Operations
     getProducts(): Promise<Product[]>;

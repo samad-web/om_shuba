@@ -7,6 +7,7 @@ export interface User {
   role: UserRole;
   name: string;
   branchId?: string; // For branch_admin role - restricts access to specific branch
+  passwordLastChanged?: string; // ISO date string for session invalidation
 }
 
 export interface Product {

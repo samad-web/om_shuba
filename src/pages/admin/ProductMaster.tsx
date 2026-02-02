@@ -216,9 +216,9 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                         }}>
                             🏷️ {category}
                         </h4>
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
+                        <div style={{ overflowX: 'auto' }} className="product-table-wrapper">
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }} className="product-table">
+                                <thead className="desktop-only-thead">
                                     <tr style={{ textAlign: 'left', background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)' }}>
                                         <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>{t('products.productName')} / {t('products.sku')}</th>
                                         <th style={{ padding: '1rem 0.75rem', fontSize: '0.8rem', fontWeight: 800 }}>{t('products.description')}</th>
@@ -229,8 +229,8 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                                 </thead>
                                 <tbody>
                                     {groupedProducts[category].map(p => (
-                                        <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                            <td style={{ padding: '1.25rem 0.75rem' }}>
+                                        <tr key={p.id} className="product-row" style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <td className="product-name-td" style={{ padding: '1.25rem 0.75rem' }}>
                                                 <div style={{
                                                     fontWeight: 800,
                                                     color: '#FFFFFF',
@@ -243,13 +243,13 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                                                 </div>
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{p.sku}</div>
                                             </td>
-                                            <td style={{ padding: '1rem 0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '250px' }}>
+                                            <td className="product-desc-td" style={{ padding: '1rem 0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '250px' }}>
                                                 {getLocalizedContent(p, 'shortDescription')}
                                             </td>
-                                            <td style={{ padding: '1rem 0.5rem', fontWeight: 600, color: 'var(--primary)' }}>
+                                            <td className="product-price-td" style={{ padding: '1rem 0.5rem', fontWeight: 600, color: 'var(--primary)' }}>
                                                 {p.priceRange}
                                             </td>
-                                            <td style={{ padding: '1rem 0.5rem' }}>
+                                            <td className="product-status-td" style={{ padding: '1rem 0.5rem' }}>
                                                 <span style={{
                                                     padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem',
                                                     background: p.active ? '#dcfce7' : '#fee2e2',
@@ -259,7 +259,7 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                                                     {p.active ? t('products.active').toUpperCase() : t('products.inactive').toUpperCase()}
                                                 </span>
                                             </td>
-                                            <td style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>
+                                            <td className="product-actions-td" style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>
                                                 <button className="btn" style={{ fontSize: '0.8rem', marginRight: '0.5rem' }} onClick={() => openModal(p)}>{t('common.edit')}</button>
                                                 <button
                                                     className="btn"
@@ -424,6 +424,44 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                     </div>
                 </div>
             )}
+            {/* Mobile Table Styles */}
+            <style>{`
+                @media (max-width: 768px) {
+                    .desktop-only-thead { display: none; }
+                    .product-table, .product-table tbody, .product-row, .product-row td {
+                        display: block;
+                        width: 100%;
+                    }
+                    .product-row {
+                        padding: 1rem 0;
+                        border-bottom: 2px solid var(--border) !important;
+                    }
+                    .product-row td {
+                        padding: 0.5rem 0 !important;
+                        text-align: left !important;
+                        max-width: none !important;
+                    }
+                    .product-desc-td {
+                        color: var(--text-muted) !important;
+                        font-size: 0.8rem !important;
+                        margin-bottom: 0.5rem;
+                    }
+                    .product-price-td::before {
+                        content: 'Price Range: ';
+                        font-weight: 700;
+                        font-size: 0.75rem;
+                        color: var(--text-muted);
+                    }
+                    .product-actions-td {
+                        display: flex;
+                        gap: 0.5rem;
+                        padding-top: 1rem !important;
+                    }
+                    .product-actions-td .btn {
+                        flex: 1;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

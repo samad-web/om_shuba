@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { dataService } from '../../services/DataService';
+import SettingsToggle from '../SettingsToggle';
 
 interface SidebarProps {
     activeTab: string;
@@ -10,7 +11,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseChange }) => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const { t } = useSettings();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [branchName, setBranchName] = useState('');
@@ -137,6 +138,47 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                         {!isCollapsed && <span>{item.label}</span>}
                     </button>
                 ))}
+
+                {/* Logout Button */}
+                <button
+                    onClick={logout}
+                    className="sidebar-btn logout-btn"
+                    title={isCollapsed ? t('common.logout') : undefined}
+                    style={{
+                        width: '100%',
+                        justifyContent: isCollapsed ? 'center' : 'flex-start',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: isCollapsed ? '0' : 'var(--space-3)',
+                        background: 'transparent',
+                        color: 'var(--text-muted)',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: isCollapsed ? 'var(--space-4)' : '0.875rem 1.25rem',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 200ms ease',
+                        marginTop: 'auto', // Push to bottom on desktop
+                        paddingLeft: '1.25rem',
+                        paddingRight: '1.25rem'
+                    }}
+                >
+                    <span style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center' }}>🚪</span>
+                    {!isCollapsed && <span>{t('common.logout')}</span>}
+                </button>
+            </div>
+
+            {/* Desktop Settings Toggle */}
+            <div className="desktop-only-toggle" style={{ marginBottom: 'var(--space-2)' }}>
+                {!isCollapsed ? (
+                    <SettingsToggle />
+                ) : (
+                    <div style={{ padding: '0.5rem', display: 'flex', justifyContent: 'center' }}>
+                        {/* Minimal indicator or just hidden when collapsed if complex */}
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)' }} title="Settings active" />
+                    </div>
+                )}
             </div>
 
             {/* Toggle Button */}
@@ -170,6 +212,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                 .theme-sidebar {
                     background: var(--bg-card);
                     box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+                    z-index: 1000;
                 }
 
                 .sidebar-btn {
@@ -184,6 +227,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
 
                 .sidebar-btn.active {
                     box-shadow: 0 8px 16px var(--primary-glow);
+                }
+
+                .logout-btn:hover {
+                    color: #ef4444 !important; /* Red for logout */
+                    background: rgba(239, 68, 68, 0.05) !important;
                 }
 
                 .sidebar-toggle-btn:hover {
@@ -207,14 +255,37 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                         width: 100% !important;
                         height: 70px !important;
                         flex-direction: row !important;
-                        padding: 0 var(--space-4) !important;
+                        padding: 0 0.5rem !important;
                         border-radius: 0 !important;
                         border-top: 1px solid var(--border) !important;
                         border-right: none !important;
+                        overflow: hidden !important; /* Contain the scrollable area */
                     }
-                    .sidebar-nav > div:nth-child(2) { flex-direction: row !important; align-items: center; margin: 0 !important; width: 100%; }
+                    .sidebar-nav > div:nth-child(2) { 
+                        flex-direction: row !important; 
+                        align-items: center; 
+                        margin: 0 !important; 
+                        width: 100%;
+                        overflow-x: auto !important; /* Enable horizontal scroll */
+                        overflow-y: hidden !important;
+                        -webkit-overflow-scrolling: touch;
+                        scrollbar-width: none; /* Firefox */
+                        -ms-overflow-style: none; /* IE/Edge */
+                        gap: 0.25rem !important;
+                        padding: 0 0.5rem;
+                    }
+                    .sidebar-nav > div:nth-child(2)::-webkit-scrollbar {
+                        display: none; /* Chrome/Safari */
+                    }
                     .sidebar-toggle-btn { display: none !important; }
-                    .sidebar-btn { flex: 1; height: 50px; justify-content: center !important; }
+                    .desktop-only-toggle { display: none !important; }
+                    .sidebar-btn { 
+                        flex: 0 0 auto !important; /* Prevent shrinking */
+                        width: 64px !important;
+                        height: 50px; 
+                        justify-content: center !important; 
+                        padding: 0 !important;
+                    }
                 }
                 `}
             </style>

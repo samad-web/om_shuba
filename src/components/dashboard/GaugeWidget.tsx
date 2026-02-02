@@ -14,7 +14,7 @@ const GaugeWidget: React.FC<GaugeWidgetProps> = ({ title, percentage, subtext })
 
     return (
         <div className="card" style={{ textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h4 style={{ fontSize: '0.9rem', color: '#0f172a', marginBottom: '1rem' }}>{title}</h4>
+            <h4 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '1rem' }}>{title}</h4>
             <div style={{ position: 'relative', height: '100px', width: '100%', display: 'flex', justifyContent: 'center' }}>
                 <svg width="120" height="70" style={{ transform: 'rotate(180deg)' }}>
                     <circle

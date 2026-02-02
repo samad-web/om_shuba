@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import SettingsToggle from '../components/SettingsToggle';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -14,13 +15,17 @@ const Login: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        const user = await login(username, password);
-        if (user) {
-            if (user.role === 'admin') navigate('/owner');
-            else if (user.role === 'branch_admin') navigate('/admin');
-            else navigate('/telecaller');
-        } else {
-            setError(t('login.error'));
+        try {
+            const user = await login(username, password);
+            if (user) {
+                if (user.role === 'admin') navigate('/owner');
+                else if (user.role === 'branch_admin') navigate('/admin');
+                else navigate('/telecaller');
+            } else {
+                setError(t('login.error') + " (Check console for details)");
+            }
+        } catch (err: any) {
+            setError(err.message || t('login.error'));
         }
     };
 
@@ -32,8 +37,12 @@ const Login: React.FC = () => {
             alignItems: 'center',
             minHeight: '100vh',
             background: 'radial-gradient(circle at top right, var(--primary-light), transparent), radial-gradient(circle at bottom left, var(--primary-glow), transparent), var(--bg-app)',
-            padding: 'var(--space-4)'
+            padding: 'var(--space-4)',
+            position: 'relative'
         }}>
+            <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10 }}>
+                <SettingsToggle />
+            </div>
             <div className="card animate-fade-in" style={{
                 width: '100%',
                 maxWidth: '400px',
@@ -73,11 +82,14 @@ const Login: React.FC = () => {
                         borderRadius: 'var(--radius)',
                         marginBottom: 'var(--space-6)',
                         textAlign: 'center',
-                        fontSize: '0.8125rem',
+                        fontSize: '0.75rem',
                         fontWeight: 600,
                         border: '1px solid rgba(239, 68, 68, 0.2)'
                     }}>
                         {error}
+                        <div style={{ marginTop: '4px', fontSize: '10px', opacity: 0.7 }}>
+                            Check browser console (F12) for technical details
+                        </div>
                     </div>
                 )}
 
@@ -116,6 +128,9 @@ const Login: React.FC = () => {
             <p style={{ marginTop: 'var(--space-8)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>
                 &copy; {new Date().getFullYear()} Om Shuba Agencies. All rights reserved.
             </p>
+            <div style={{ marginTop: '0.5rem', fontSize: '10px', opacity: 0.5, color: 'var(--text-muted)' }}>
+                Connection: {import.meta.env.VITE_USE_SUPABASE === 'true' ? 'Supabase' : 'LocalStorage'}
+            </div>
         </div>
     );
 };

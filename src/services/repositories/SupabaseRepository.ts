@@ -12,15 +12,21 @@ export class SupabaseRepository implements IDataRepository {
         this.supabase = createClient(supabaseUrl, supabaseKey);
     }
 
+    // Helper to map username to synthetic email for Supabase Auth
+    private usernameToEmail(username: string): string {
+        return `${username.toLowerCase()}@omshuba.internal`;
+    }
+
     // Helper to map snake_case to camelCase and vice versa
     private mapUser(data: any): User {
         return {
             id: data.id,
             username: data.username,
-            password: data.password,
+            // We no longer return the password from DB for security
             role: data.role,
             name: data.name,
-            branchId: data.branch_id
+            branchId: data.branch_id,
+            passwordLastChanged: data.password_last_changed
         };
     }
 
@@ -143,7 +149,10 @@ export class SupabaseRepository implements IDataRepository {
     // User Operations
     async getUsers(): Promise<User[]> {
         const { data, error } = await this.supabase.from('users').select('*');
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase error fetching users:", error.message, error.details);
+            throw error;
+        }
         return (data || []).map(this.mapUser);
     }
 
@@ -158,29 +167,82 @@ export class SupabaseRepository implements IDataRepository {
     }
 
     async addUser(user: User): Promise<void> {
+        // 1. Create record in public users table (excluding password)
         const { error } = await this.supabase.from('users').insert([{
             id: user.id,
             username: user.username,
-            password: user.password,
             role: user.role,
             name: user.name,
-            branch_id: user.branchId
+            branch_id: user.branchId,
+            password_last_changed: new Date().toISOString()
         }]);
+
         if (error) throw error;
+
+        // 2. Create/Sync user in Supabase Auth via Edge Function
+        const { error: syncError } = await this.supabase.functions.invoke('update-staff-auth', {
+            body: {
+                userId: user.id,
+                email: this.usernameToEmail(user.username),
+                password: user.password
+            }
+        });
+
+        if (syncError) {
+            console.error("Auth creation failed:", syncError);
+            throw new Error("User record created, but Auth credentials failed. Please use 'Edit' to set a password.");
+        }
     }
 
     async updateUser(user: User): Promise<void> {
+        // 1. Update profile in our custom users table (excluding password)
         const { error } = await this.supabase
             .from('users')
             .update({
                 username: user.username,
-                password: user.password,
                 role: user.role,
                 name: user.name,
-                branch_id: user.branchId
+                branch_id: user.branchId,
+                password_last_changed: user.passwordLastChanged
             })
             .eq('id', user.id);
-        if (error) throw error;
+
+        if (error) {
+            console.error("Supabase Profile Update Error:", error.message, error.details, error.hint);
+            throw new Error(`Profile Update Failed: ${error.message}`);
+        }
+
+        // 2. If a password was provided, sync it to Supabase Auth via Edge Function
+        if (user.password) {
+            const { error: syncError } = await this.supabase.functions.invoke('update-staff-auth', {
+                body: {
+                    userId: user.id,
+                    email: this.usernameToEmail(user.username),
+                    password: user.password
+                }
+            });
+
+            if (syncError) {
+                console.error("Auth sync failed technical details:", syncError);
+                let errorMessage = "Profile updated, but password sync failed.";
+
+                // Try to extract the JSON error body from the response
+                try {
+                    if ((syncError as any).context && typeof (syncError as any).context.json === 'function') {
+                        const errorBody = await (syncError as any).context.json();
+                        if (errorBody && errorBody.error) {
+                            errorMessage += ` Reason: ${errorBody.error}`;
+                        }
+                    } else if (syncError.message) {
+                        errorMessage += ` Reason: ${syncError.message}`;
+                    }
+                } catch (e) {
+                    if (syncError.message) errorMessage += ` Reason: ${syncError.message}`;
+                }
+
+                throw new Error(errorMessage);
+            }
+        }
     }
 
     async deleteUser(id: string): Promise<void> {
@@ -189,14 +251,41 @@ export class SupabaseRepository implements IDataRepository {
     }
 
     async login(username: string, password: string): Promise<User | null> {
-        const { data, error } = await this.supabase
+        const cleanUsername = username.trim().toLowerCase();
+        console.log(`Debug: Attempting login for ${cleanUsername}`);
+
+        // 1. Sign in with Supabase Auth using synthetic email
+        const { data: authData, error: authError } = await this.supabase.auth.signInWithPassword({
+            email: this.usernameToEmail(cleanUsername),
+            password: password
+        });
+
+        if (authError || !authData.user) {
+            console.error("Auth login failed:", authError?.message);
+            throw new Error(authError?.message || "Authentication failed");
+        }
+
+        console.log("Debug: Auth successful, fetching profile...");
+
+        // 2. Fetch profile data from our custom users table
+        const { data: profile, error: profileError } = await this.supabase
             .from('users')
             .select('*')
-            .eq('username', username)
-            .eq('password', password)
+            .eq('username', cleanUsername)
             .single();
-        if (error) return null;
-        return this.mapUser(data);
+
+        if (profileError || !profile) {
+            console.error("Profile fetch failed:", profileError?.message);
+            throw new Error(`Profile not found in database: ${profileError?.message || 'Check database records'}`);
+        }
+
+        console.log("Debug: Login complete!");
+        return this.mapUser(profile);
+    }
+
+    async logout(): Promise<void> {
+        const { error } = await this.supabase.auth.signOut();
+        if (error) throw error;
     }
 
     // Product Operations
@@ -300,7 +389,10 @@ export class SupabaseRepository implements IDataRepository {
     // Branch Operations
     async getBranches(): Promise<Branch[]> {
         const { data, error } = await this.supabase.from('branches').select('*');
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase error fetching branches:", error.message, error.details);
+            throw error;
+        }
         return (data || []).map(this.mapBranch);
     }
 

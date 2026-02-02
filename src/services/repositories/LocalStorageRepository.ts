@@ -118,6 +118,11 @@ export class LocalStorageRepository implements IDataRepository {
         return users.find(u => u.username === username && u.password === password) || null;
     }
 
+    async logout(): Promise<void> {
+        // No server-side session to invalidate for LocalStorage
+        return Promise.resolve();
+    }
+
     // Product Operations
     async getProducts(): Promise<Product[]> {
         return (JSON.parse(localStorage.getItem(KEYS.PRODUCTS) || '[]') as (Product | null)[]).filter((p): p is Product => p !== null);

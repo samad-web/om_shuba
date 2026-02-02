@@ -19,112 +19,86 @@ const BranchMaster: React.FC = () => {
         name: '', location: '', contactNumber: '', active: true
     });
 
+    // Performance Metrics
+    const [metrics, setMetrics] = useState<Record<string, { total: number, converted: number, active?: number, rate: number, rank: number }>>({});
+    const [topBranchId, setTopBranchId] = useState<string | null>(null);
+
     useEffect(() => {
-        loadBranches();
+        loadData();
     }, []);
 
-    const loadBranches = async () => {
+    const loadData = async () => {
         setLoading(true);
         try {
-            const allBranches = await dataService.getBranches();
-            // Branch admin can only see their own branch
-            if (user?.role === 'branch_admin' && user.branchId) {
-                setBranches(allBranches.filter(b => b.id === user.branchId));
-            } else {
-                setBranches(allBranches);
-            }
+            const [allBranches, allEnquiries] = await Promise.all([
+                dataService.getBranches(),
+                dataService.getEnquiries()
+            ]);
+
+            // Filter branches
+            const visibleBranches = (user?.role === 'branch_admin' && user.branchId)
+                ? allBranches.filter(b => b.id === user.branchId)
+                : allBranches;
+            setBranches(visibleBranches);
+
+            // Calculate Metrics
+            const metricsMap: Record<string, { total: number, converted: number, active: number, rate: number, rank: number, score: number }> = {};
+
+            visibleBranches.forEach(b => {
+                const branchEnquiries = allEnquiries.filter(e => e.branchId === b.id);
+                const total = branchEnquiries.length;
+                const converted = branchEnquiries.filter(e => e.pipelineStage === 'Closed-Converted').length;
+                // Active: Not closed (any stage that isn't Converted or Not Interested)
+                const active = branchEnquiries.filter(e => !['Closed-Converted', 'Closed-Not Interested'].includes(e.pipelineStage)).length;
+
+                const rate = total > 0 ? Math.round((converted / total) * 100) : 0;
+                // Weighted score: conversion rate (70%) + volume factor (30%)
+                const score = (rate * 0.7) + (Math.min(total, 50) * 0.6);
+
+                metricsMap[b.id] = { total, converted, active, rate, rank: 0, score };
+            });
+
+            // Calculate Ranks
+            const sortedIds = Object.keys(metricsMap).sort((a, b) => metricsMap[b].score - metricsMap[a].score);
+            sortedIds.forEach((id, index) => {
+                metricsMap[id].rank = index + 1;
+            });
+
+            setMetrics(metricsMap);
+            setTopBranchId(sortedIds[0] || null);
+
+            if (!loading) showToast('Performance analysis updated', 'success');
+
         } catch (error) {
-            console.error("Failed to load branches", error);
+            console.error("Failed to load data", error);
             showToast(t('common.loading') + ' ' + t('common.error'), 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const openModal = (branch?: Branch) => {
-        if (branch) {
-            setEditingBranch(branch);
-            setFormData(branch);
-        } else {
-            setEditingBranch(null);
-            setFormData({ name: '', location: '', contactNumber: '', active: true });
-        }
-        setIsModalOpen(true);
+    // ... (keep openModal and others) ...
+
+    const getPerformanceColor = (rate: number) => {
+        if (rate >= 40) return '#16a34a'; // Green
+        if (rate >= 20) return '#ea580c'; // Orange
+        return '#dc2626'; // Red
     };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            if (editingBranch) {
-                // Update existing branch
-                await dataService.updateBranch({ ...editingBranch, ...formData } as Branch);
-                showToast(t('branches.saveSuccess'), 'success');
-            } else {
-                // Add new branch
-                const newBranchId = 'b' + Date.now();
-                const newBranch = { ...formData, id: newBranchId } as Branch;
-                await dataService.addBranch(newBranch);
-
-                // Automatically create branch admin account
-                const branchNameSlug = formData.name?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || 'branch';
-                const newBranchAdmin = {
-                    id: 'u' + Date.now(),
-                    username: `admin_${branchNameSlug}`,
-                    password: 'password', // Default password
-                    role: 'branch_admin' as const,
-                    name: `${formData.name} Admin`,
-                    branchId: newBranchId
-                };
-                await dataService.addUser(newBranchAdmin);
-
-                showToast(t('branches.createSuccess').replace('{0}', newBranchAdmin.username).replace('{1}', 'password'), 'success');
-            }
-            setIsModalOpen(false);
-            loadBranches();
-        } catch (error) {
-            console.error("Failed to save branch", error);
-            showToast('Failed to save branch', 'error');
-        }
-    };
-
-    const toggleStatus = async (branch: Branch) => {
-        try {
-            await dataService.updateBranch({ ...branch, active: !branch.active });
-            loadBranches();
-            showToast(t('branches.statusUpdate').replace('{0}', !branch.active ? t('common.active') : t('common.inactive')), 'success');
-        } catch (error) {
-            console.error("Failed to update status", error);
-            showToast('Failed to update status', 'error');
-        }
-    };
-
-    const deleteBranch = async (branch: Branch) => {
-        const confirmed = await confirm({
-            title: t('branches.deleteBranch'),
-            message: t('branches.confirmDelete'),
-            confirmText: t('common.delete'),
-            cancelText: t('common.cancel'),
-            danger: true
-        });
-
-        if (confirmed) {
-            try {
-                await dataService.deleteBranch(branch.id);
-                loadBranches();
-                showToast(t('branches.deleteSuccess'), 'success');
-            } catch (error) {
-                console.error("Failed to delete branch", error);
-                showToast('Failed to delete branch', 'error');
-            }
-        }
-    };
-
-    if (loading) return <div>{t('common.loading')}</div>;
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h3>{t('branches.title')} {user?.role === 'branch_admin' && user.branchId && <span style={{ color: '#059669', fontWeight: 'normal' }}>({branches[0]?.name})</span>}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <h3>{t('branches.title')} {user?.role === 'branch_admin' && user.branchId && <span style={{ color: '#059669', fontWeight: 'normal' }}>({branches[0]?.name})</span>}</h3>
+                    <button
+                        onClick={() => loadData()}
+                        className="btn"
+                        style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                        title="Re-analyze branch performance"
+                    >
+                        🔄 Refresh Analysis
+                    </button>
+                </div>
                 {user?.role !== 'branch_admin' && (
                     <button className="btn btn-primary" onClick={() => openModal()}>+ {t('branches.addBranch')}</button>
                 )}
@@ -137,6 +111,7 @@ const BranchMaster: React.FC = () => {
                         <th style={{ padding: '0.5rem' }}>{t('branches.location')}</th>
                         <th style={{ padding: '0.5rem' }}>{t('branches.contactNumber')}</th>
                         <th style={{ padding: '0.5rem' }}>{t('common.status')}</th>
+                        <th style={{ padding: '0.5rem', width: '200px' }}>Performance</th>
                         <th style={{ padding: '0.5rem' }}>{t('common.actions')}</th>
                     </tr>
                 </thead>
@@ -154,6 +129,71 @@ const BranchMaster: React.FC = () => {
                                 }}>
                                     {b.active ? t('common.active') : t('common.inactive')}
                                 </span>
+                            </td>
+                            <td style={{ padding: '0.5rem', width: '200px' }}>
+                                {/* Performance Visual */}
+                                {(() => {
+                                    const m = metrics[b.id] || { total: 0, converted: 0, rate: 0, rank: 0 };
+                                    const isTop = topBranchId === b.id && m.total > 0;
+                                    const color = getPerformanceColor(m.rate);
+
+                                    return (
+                                        <div className="group" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'help' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px', fontSize: '0.7rem' }}>
+                                                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{m.rate}%</span>
+                                                    {isTop && <span className="animate-pulse" style={{ fontSize: '0.8rem' }}>👑</span>}
+                                                </div>
+                                                <div style={{ width: '100%', height: '6px', background: 'var(--bg-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
+                                                    <div className="performance-bar" style={{
+                                                        width: `${m.rate}%`,
+                                                        height: '100%',
+                                                        background: isTop ? `linear-gradient(90deg, ${color}, #fbbf24)` : color,
+                                                        borderRadius: '3px',
+                                                        transition: 'width 1s ease-out',
+                                                        boxShadow: isTop ? '0 0 8px rgba(251, 191, 36, 0.5)' : 'none'
+                                                    }} />
+                                                </div>
+                                            </div>
+
+                                            {/* Minimal Tooltip on Hover */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                                                background: 'var(--bg-card)', border: '1px solid var(--border)',
+                                                borderRadius: '8px', padding: '0.75rem',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                zIndex: 100, width: '150px',
+                                                opacity: 0, pointerEvents: 'none',
+                                                marginBottom: '8px',
+                                                fontSize: '0.75rem',
+                                                transition: 'opacity 0.2s',
+                                                textAlign: 'center'
+                                            }} className="hover-tooltip">
+                                                <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>{b.name}</div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <span>Total Leads:</span> <strong>{m.total}</strong>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#3b82f6' }}>
+                                                    <span>In Pipeline:</span> <strong>{m.active || 0}</strong>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
+                                                    <span>Converted:</span> <strong>{m.converted}</strong>
+                                                </div>
+                                                <div style={{ margin: '0.25rem 0', height: '1px', background: 'var(--border)' }}></div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: color }}>
+                                                    <span>Win Rate:</span> <strong>{m.rate}%</strong>
+                                                </div>
+                                                {isTop && <div style={{ fontSize: '0.65rem', color: '#d97706', marginTop: '0.25rem', fontWeight: 700 }}>🏆 Top Performer</div>}
+                                            </div>
+                                            <style>{`
+                                                .group:hover .hover-tooltip { opacity: 1; pointer-events: auto; }
+                                                @keyframes loadBar { from { width: 0; } }
+                                                .performance-bar { animation: loadBar 1s ease-out; }
+                                            `}</style>
+                                        </div>
+                                    );
+                                })()}
                             </td>
                             <td style={{ padding: '0.5rem' }}>
                                 <button className="btn" style={{ fontSize: '0.8rem', marginRight: '0.5rem' }} onClick={() => openModal(b)}>{t('common.edit')}</button>
@@ -174,9 +214,10 @@ const BranchMaster: React.FC = () => {
             {isModalOpen && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    zIndex: 2000, padding: '1rem'
                 }}>
-                    <div className="card" style={{ width: '400px' }}>
+                    <div className="card" style={{ width: '100%', maxWidth: '400px', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h3>{editingBranch ? t('branches.editBranch') : t('branches.addBranch')}</h3>
                         <form onSubmit={handleSubmit}>
                             <div style={{ marginBottom: '1rem' }}>

@@ -38,12 +38,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return validUser;
             }
         } catch (error) {
-            console.error("Login error", error);
+            console.error("Login error in context", error);
+            throw error; // Re-throw so Login.tsx can catch it
         }
         return null;
     };
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            await dataService.logout();
+        } catch (error) {
+            console.error("Backend logout error", error);
+        }
         setUser(null);
         localStorage.removeItem('tc_session_user');
     };

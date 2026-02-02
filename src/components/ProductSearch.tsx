@@ -9,7 +9,7 @@ interface ProductSearchProps {
 }
 
 const ProductSearch: React.FC<ProductSearchProps> = ({ onSelect }) => {
-    const { t } = useSettings();
+    const { t, language } = useSettings();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Product[]>([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -46,7 +46,10 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onSelect }) => {
             p.name.toLowerCase().includes(lowerQ) ||
             p.category.toLowerCase().includes(lowerQ) ||
             p.sku.toLowerCase().includes(lowerQ) ||
-            p.shortDescription.toLowerCase().includes(lowerQ)
+            p.shortDescription.toLowerCase().includes(lowerQ) ||
+            (p.nameTa && p.nameTa.toLowerCase().includes(lowerQ)) ||
+            (p.categoryTa && p.categoryTa.toLowerCase().includes(lowerQ)) ||
+            (p.shortDescriptionTa && p.shortDescriptionTa.toLowerCase().includes(lowerQ))
         );
         setResults(filtered.slice(0, 10)); // Limit to 10
         setSelectedIndex(0);
@@ -76,6 +79,14 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onSelect }) => {
         // Usually moving focus to the next relevant field (Customer Name) is better speed-wise.
         // I'll leave focus management to the parent or just let user Tab.
     };
+
+    // Helper to get localized text
+    const getLocalized = (item: Product, field: keyof Product, taField: keyof Product) => {
+        if (language === 'ta' && item[taField]) {
+            return item[taField] as string;
+        }
+        return item[field] as string;
+    }
 
     return (
         <div style={{ position: 'relative' }}>
@@ -133,23 +144,29 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onSelect }) => {
                     zIndex: 10, listStyle: 'none', padding: 0, margin: 0,
                     maxHeight: '300px', overflowY: 'auto'
                 }}>
-                    {results.map((p, index) => (
-                        <li
-                            key={p.id}
-                            onClick={() => selectProduct(p)}
-                            style={{
-                                padding: '0.75rem 1rem',
-                                cursor: 'pointer',
-                                background: index === selectedIndex ? 'var(--bg-hover)' : 'var(--bg-card)',
-                                borderBottom: '1px solid var(--border)'
-                            }}
-                        >
-                            <div style={{ fontWeight: 600 }}>{p.name} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.9rem' }}>({p.category})</span></div>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                <span style={{ fontWeight: 600, color: '#059669' }}>SKU: {p.sku}</span> • {p.shortDescription} — <b>{p.priceRange}</b>
-                            </div>
-                        </li>
-                    ))}
+                    {results.map((p, index) => {
+                        const displayName = getLocalized(p, 'name', 'nameTa');
+                        const displayCategory = getLocalized(p, 'category', 'categoryTa');
+                        const displayDesc = getLocalized(p, 'shortDescription', 'shortDescriptionTa');
+
+                        return (
+                            <li
+                                key={p.id}
+                                onClick={() => selectProduct(p)}
+                                style={{
+                                    padding: '0.75rem 1rem',
+                                    cursor: 'pointer',
+                                    background: index === selectedIndex ? 'var(--bg-hover)' : 'var(--bg-card)',
+                                    borderBottom: '1px solid var(--border)'
+                                }}
+                            >
+                                <div style={{ fontWeight: 600 }}>{displayName} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.9rem' }}>({displayCategory})</span></div>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                    <span style={{ fontWeight: 600, color: '#059669' }}>SKU: {p.sku}</span> • {displayDesc} — <b>{p.priceRange}</b>
+                                </div>
+                            </li>
+                        );
+                    })}
                 </ul>
             )}
         </div>

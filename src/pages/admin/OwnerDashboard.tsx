@@ -10,12 +10,11 @@ import UserManagement from './UserManagement';
 import AccountSettings from './AccountSettings';
 import PromotionManagement from '../../components/PromotionManagement';
 import { dataService } from '../../services/DataService';
-import { migrationService } from '../../services/MigrationService';
 import { downloadBusinessReport } from '../../services/excelService';
 import { useSettings } from '../../context/SettingsContext';
-import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { AdminMessaging, BranchMessaging } from '../../components/dashboard/Messaging';
+import SettingsToggle from '../../components/SettingsToggle';
 
 const OwnerDashboard: React.FC = () => {
     const { t } = useSettings();
@@ -23,9 +22,7 @@ const OwnerDashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [isSyncing, setIsSyncing] = useState(false);
-    const [hasLocalData, setHasLocalData] = useState(false);
-    const { showToast } = useToast();
+
 
     // Messaging State
     const [showMessaging, setShowMessaging] = useState(false);
@@ -47,25 +44,7 @@ const OwnerDashboard: React.FC = () => {
 
     useEffect(() => {
         calculateMetrics();
-        setHasLocalData(migrationService.hasLocalData());
     }, []);
-
-    const handleSync = async () => {
-        if (!window.confirm("This will upload all local data to Supabase. Records with duplicate IDs will be skipped. Progress?")) return;
-
-        setIsSyncing(true);
-        try {
-            const results = await migrationService.migrateAll();
-            setHasLocalData(migrationService.hasLocalData());
-            showToast(`Sync complete! Migrated: ${results.branches} branches, ${results.products} products, ${results.enquiries} enquiries.`, 'success');
-            calculateMetrics();
-        } catch (error) {
-            console.error("Sync failed", error);
-            showToast("Sync failed. Check console for details.", 'error');
-        } finally {
-            setIsSyncing(false);
-        }
-    };
 
     const handleExport = async () => {
         if (exportData) {
@@ -172,12 +151,15 @@ const OwnerDashboard: React.FC = () => {
             default:
                 return (
                     <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+
+                        <div className="dash-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                             <div>
-                                <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem' }}>{t('login.title')} {t('nav.dashboard')}</h2>
+                                <h2 style={{ fontSize: 'clamp(1.5rem, 5vw, 1.75rem)', fontWeight: 800, marginBottom: '0.25rem', lineHeight: 1.2 }}>
+                                    {t('login.title')} {t('nav.dashboard')}
+                                </h2>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Business health and operations monitoring</p>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                            <div className="dash-actions" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                                 {/* Messaging Icon */}
                                 <div style={{ position: 'relative' }}>
                                     <button
@@ -194,28 +176,13 @@ const OwnerDashboard: React.FC = () => {
                                     )}
                                 </div>
 
-                                {hasLocalData && (
-                                    <button
-                                        className="btn"
-                                        onClick={handleSync}
-                                        disabled={isSyncing}
-                                        style={{
-                                            background: 'rgba(22, 163, 74, 0.1)',
-                                            color: '#16a34a',
-                                            borderColor: '#16a34a',
-                                            fontWeight: 700
-                                        }}
-                                    >
-                                        {isSyncing ? '⏳ Syncing...' : '☁️ Sync Legacy Data'}
-                                    </button>
-                                )}
                                 <button className="btn" onClick={() => calculateMetrics()}>🔄 {t('common.refresh')}</button>
                                 <button className="btn btn-primary" onClick={handleExport} style={{ borderRadius: '12px', padding: '0.75rem 1.5rem' }}>{t('owner.exportData')}</button>
                             </div>
                         </div>
 
                         {/* Top Metrics */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                             <StatCard
                                 title={t('metrics.activePipeline')}
                                 value={metrics.activePipeline.toString()}
@@ -236,8 +203,8 @@ const OwnerDashboard: React.FC = () => {
                             />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.3fr', gap: '1.5rem', marginBottom: '2rem' }}>
-                            <div style={{ gridColumn: 'span 1' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                            <div style={{ height: '100%' }}>
                                 <GaugeWidget
                                     title={t('metrics.demoFulfillment')}
                                     percentage={metrics.demoFulfillment}
@@ -245,7 +212,7 @@ const OwnerDashboard: React.FC = () => {
                                 />
                             </div>
 
-                            <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                            <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                 <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '1.25rem' }}>Top Selling Products</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
                                     {metrics.topSellers.map(item => (
@@ -268,7 +235,7 @@ const OwnerDashboard: React.FC = () => {
                                 <button className="btn" style={{ width: '100%', marginTop: 'auto', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: '10px' }} onClick={() => setActiveTab('conversions')}>View Full Sales Report</button>
                             </div>
 
-                            <div className="card" style={{ gridColumn: 'span 1' }}>
+                            <div className="card" style={{ height: '100%' }}>
                                 <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.25rem' }}>Branch Lead Density</h4>
                                 <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Geographic distribution of agri-machinery demand.</p>
                                 <div style={{ height: '150px', background: 'rgba(22, 163, 74, 0.05)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -281,13 +248,14 @@ const OwnerDashboard: React.FC = () => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                             <div style={{
                                 background: 'linear-gradient(135deg, #064e3b, #16532d)',
                                 borderRadius: '24px', padding: '1.75rem', color: 'white', position: 'relative',
-                                display: 'flex', justifyContent: 'space-between', boxShadow: 'var(--shadow-lg)'
+                                display: 'flex', justifyContent: 'space-between', boxShadow: 'var(--shadow-lg)',
+                                minHeight: '180px', flexDirection: 'column'
                             }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', marginBottom: '1rem' }}>
                                     <div style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem' }}>Action Urgency<br />Today: {metrics.urgentActions} Slots</div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                         <div style={{ display: 'flex' }}>
@@ -296,10 +264,12 @@ const OwnerDashboard: React.FC = () => {
                                         <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Demos/Visits Schedule</span>
                                     </div>
                                 </div>
-                                <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start' }}>
-                                    <span style={{ fontSize: '0.85rem', opacity: 0.8, fontWeight: 600 }}>TOTAL REALIZED REVENUE</span>
-                                    <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#86efac' }}>₹{metrics.totalRevenue.toLocaleString()}</span>
-                                    <span style={{ fontSize: '0.75rem', transform: 'translateY(-2px)' }}>Direct deal closures</span>
+                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontSize: '0.85rem', opacity: 0.8, fontWeight: 600 }}>TOTAL REALIZED REVENUE</span>
+                                        <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#86efac' }}>₹{metrics.totalRevenue.toLocaleString()}</span>
+                                    </div>
+                                    <span style={{ fontSize: '0.75rem' }}>Direct deal closures</span>
                                 </div>
                                 <span style={{ position: 'absolute', top: '1rem', right: '1.5rem', fontSize: '1.2rem', opacity: 0.3 }}>⚡</span>
                             </div>
@@ -310,7 +280,8 @@ const OwnerDashboard: React.FC = () => {
                                     border: '6px solid var(--primary)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontWeight: 900, fontSize: '1.25rem', color: 'var(--primary)',
-                                    background: 'var(--primary-light)'
+                                    background: 'var(--primary-light)',
+                                    flexShrink: 0
                                 }}>
                                     {metrics.leadQuality}
                                 </div>
@@ -325,20 +296,81 @@ const OwnerDashboard: React.FC = () => {
         }
     };
 
+    if (loading) return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100dvh', background: 'var(--bg-app)', color: 'var(--primary)', gap: '1rem', flexDirection: 'column' }}>
+            <div className="animate-pulse" style={{ width: '40px', height: '40px', borderRadius: '50%', border: '4px solid var(--primary)', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }}></div>
+            <span style={{ fontWeight: 600 }}>{t('common.loading')}...</span>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+    );
+
     return (
-        <div style={{ display: 'flex', gap: 'var(--space-8)', minHeight: 'calc(100vh - 120px)' }}>
+        <div className="dashboard-container" style={{ display: 'flex', background: 'var(--bg-app)', minHeight: '100dvh', position: 'relative' }}>
+            {/* Mobile Header */}
+            <div className="mobile-header" style={{
+                display: 'none', // Hidden on desktop
+                position: 'fixed',
+                top: 0, left: 0, right: 0,
+                height: '60px',
+                background: 'var(--bg-card)',
+                borderBottom: '1px solid var(--border)',
+                zIndex: 999, // Below sidebar (1000) if sidebar was top, but sidebar is bottom on mobile.
+                padding: '0 1rem',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+            }}>
+                <div style={{ fontWeight: 800, color: 'var(--primary)' }}>OM SHUBA</div>
+                <SettingsToggle />
+            </div>
+
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onCollapseChange={setIsCollapsed} />
-            <div style={{ flex: 1, marginLeft: isCollapsed ? '88px' : '260px', transition: 'margin-left 300ms ease' }} className="main-content-wrapper">
+            <div style={{
+                flex: 1,
+                padding: '2rem 3rem',
+                marginLeft: isCollapsed ? '88px' : '260px',
+                transition: 'margin-left 300ms ease',
+                minHeight: '100vh',
+                position: 'relative',
+                overflowX: 'hidden'
+            }} className="main-content-wrapper">
                 {renderContent()}
             </div>
 
             <style>
                 {`
                 @media (max-width: 1024px) {
-                    .main-content-wrapper { marginLeft: 88px !important; }
+                    .main-content-wrapper { margin-left: 88px !important; padding: 2rem !important; }
                 }
                 @media (max-width: 768px) {
-                    .main-content-wrapper { marginLeft: 0 !important; paddingBottom: 80px; }
+                    .dashboard-container { overflow: hidden !important; height: 100dvh !important; flex-direction: column !important; }
+                    .mobile-header { display: flex !important; position: relative !important; flex-shrink: 0; }
+                    .main-content-wrapper { 
+                        margin-left: 0 !important; 
+                        padding: 0.75rem !important; 
+                        padding-top: 0 !important;
+                        width: 100%;
+                        height: calc(100dvh - 130px) !important; /* 60px header + 70px nav */
+                        overflow-y: auto !important;
+                        min-height: auto !important;
+                    }
+                    .mobile-nav-spacer { display: none !important; }
+                    .dash-header {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 0.5rem !important;
+                        margin-bottom: 1rem !important;
+                    }
+                    .dash-actions {
+                        width: 100%;
+                        justify-content: flex-start;
+                        display: flex !important;
+                        gap: 0.5rem !important;
+                        flex-wrap: wrap;
+                    }
+                    .dash-actions .btn {
+                        padding: 0.5rem 0.75rem !important;
+                        font-size: 0.8rem !important;
+                    }
                 }
                 `}
             </style>

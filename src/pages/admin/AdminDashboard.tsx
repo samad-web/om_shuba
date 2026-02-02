@@ -111,7 +111,7 @@ const AdminDashboard: React.FC = () => {
                 </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
                 <StatCard
                     title={t('metrics.branchLeads')}
                     value={metrics.branchLeads.toString()}
@@ -136,7 +136,7 @@ const AdminDashboard: React.FC = () => {
                 />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 'var(--space-8)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-8)' }}>
                 <div className="card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
                         <h3 style={{ fontSize: '1.25rem' }}>{t('admin.recent_activity')}</h3>
@@ -179,7 +179,7 @@ const AdminDashboard: React.FC = () => {
 
                     <div className="card">
                         <h3 style={{ marginBottom: 'var(--space-4)', fontSize: '1.125rem' }}>{t('quickActions.title')}</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'var(--space-3)' }}>
                             <button
                                 className="btn"
                                 style={{ background: 'var(--bg-secondary)', border: 'none', padding: 'var(--space-4)', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-1)' }}
@@ -229,7 +229,8 @@ const AdminDashboard: React.FC = () => {
                 marginLeft: isCollapsed ? '80px' : '260px',
                 transition: 'margin-left 300ms ease',
                 minHeight: '100vh',
-                position: 'relative'
+                position: 'relative',
+                overflowX: 'hidden'
             }} className="main-content-wrapper">
                 {renderContent()}
             </div>
@@ -240,12 +241,11 @@ const AdminDashboard: React.FC = () => {
                     .main-content-wrapper { margin-left: 80px !important; padding: 2rem !important; }
                 }
                 @media (max-width: 768px) {
-                    .main-content-wrapper { margin-left: 0 !important; padding: 1.5rem !important; padding-bottom: 90px !important; }
+                    .main-content-wrapper { margin-left: 0 !important; padding: 0.75rem !important; padding-bottom: 90px !important; }
                 }
                 `}
             </style>
         </div>
     );
 };
-
 export default AdminDashboard;

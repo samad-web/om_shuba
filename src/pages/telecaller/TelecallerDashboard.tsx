@@ -14,7 +14,7 @@ import ConversionOverview from '../admin/ConversionOverview';
 
 const TelecallerDashboard: React.FC = () => {
     const { user } = useAuth();
-    const { t } = useSettings();
+    const { t, language } = useSettings();
     const { showToast } = useToast();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -159,13 +159,13 @@ const TelecallerDashboard: React.FC = () => {
 
             <PromotionBanner />
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
                 <StatCard title={t('telecaller.leadsToday')} value={metrics.capturedToday.toString()} trend={t('metrics.yesterdayTrend')} trendType="up" sparklineData={[5, 8, 4, 12, 10, 15, metrics.capturedToday]} />
                 <StatCard title={t('telecaller.qualificationRate')} value={`${metrics.qualifiedRate}% `} trend={t('metrics.topPerformers')} trendType="up" sparklineData={[40, 45, 38, 52, 50, 60, metrics.qualifiedRate]} />
                 <StatCard title={t('telecaller.demosScheduled')} value={metrics.scheduledDemos.toString()} trend={t('metrics.activePipelineMetric')} trendType="up" sparklineData={[2, 4, 3, 6, 5, 8, metrics.scheduledDemos]} />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
                 {/* Capture Section */}
                 <div id="section-products" className="card" style={{ padding: '2rem', scrollMarginTop: '100px' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -181,13 +181,16 @@ const TelecallerDashboard: React.FC = () => {
                             <div style={{ padding: '1rem', background: 'rgba(22, 163, 74, 0.05)', border: '1px solid #bbf7d0', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--primary-dark)', fontWeight: 700, textTransform: 'uppercase' }}>{t('products.selectedEquipment')}</div>
-                                    <div style={{ fontWeight: 700 }}>{selectedProduct.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({selectedProduct.sku})</span></div>
+                                    <div style={{ fontWeight: 700 }}>
+                                        {language === 'ta' && selectedProduct.nameTa ? selectedProduct.nameTa : selectedProduct.name}
+                                        <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({selectedProduct.sku})</span>
+                                    </div>
                                 </div>
                                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>{selectedProduct.priceRange}</div>
                             </div>
                         )}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>{t('enquiries.customerName')} *</label>
                                 <input ref={nameInputRef} className="input" required value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder={t('enquiries.fullName')} />
@@ -198,7 +201,7 @@ const TelecallerDashboard: React.FC = () => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>{t('enquiries.location')} *</label>
                                 <input className="input" required value={location} onChange={e => setLocation(e.target.value)} placeholder={t('enquiries.cityDistrict')} />
@@ -214,7 +217,7 @@ const TelecallerDashboard: React.FC = () => {
 
                         <div>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem' }}>{t('enquiries.interestedStage')}</label>
-                            <div style={{ display: 'flex', gap: '1.5rem' }}>
+                            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                                 {['Ready to Buy', 'Needs Demo', 'General Enquiry'].map(i => (
                                     <label key={i} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
                                         <input type="radio" name="intent" value={i} checked={intent === i} onChange={e => setIntent(e.target.value)} style={{ width: '18px', height: '18px' }} />
@@ -241,7 +244,13 @@ const TelecallerDashboard: React.FC = () => {
                             <div key={e.id} style={{ padding: '1rem', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
                                     <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{e.customerName}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{products.find(p => p.id === e.productId)?.name || e.productId}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        {(() => {
+                                            const p = products.find(p => p.id === e.productId);
+                                            if (!p) return e.productId;
+                                            return language === 'ta' ? (p.nameTa || p.name) : p.name;
+                                        })()}
+                                    </div>
 
                                 </div>
                                 <div style={{
@@ -281,7 +290,8 @@ const TelecallerDashboard: React.FC = () => {
                 padding: '2rem 3rem',
                 marginLeft: isCollapsed ? '80px' : '260px', // Matches dynamic sidebar width
                 transition: 'margin-left 300ms ease',
-                position: 'relative'
+                position: 'relative',
+                overflowX: 'hidden'
             }}>
                 {loading && (
                     <div style={{
@@ -306,11 +316,10 @@ const TelecallerDashboard: React.FC = () => {
                     main { margin-left: 80px !important; padding: 2rem !important; }
                 }
                 @media (max-width: 768px) {
-                    main { margin-left: 0 !important; padding: 1.5rem !important; padding-bottom: 90px !important; }
+                    main { margin-left: 0 !important; padding: 0.75rem !important; padding-bottom: 90px !important; }
                 }
             `}</style>
         </div>
     );
 };
-
 export default TelecallerDashboard;

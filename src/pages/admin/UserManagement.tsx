@@ -48,8 +48,11 @@ const UserManagement: React.FC = () => {
         try {
             if (editingUser) {
                 const updated: User = { ...editingUser, username, name, role, branchId: role === 'admin' ? undefined : branchId };
-                // If password is provided, update it
-                if (password) updated.password = password;
+                // If password is provided, update it and set last changed date
+                if (password) {
+                    updated.password = password;
+                    updated.passwordLastChanged = new Date().toISOString();
+                }
                 await dataService.updateUser(updated);
                 showToast(t('users.updateSuccess'), 'success');
             } else {
@@ -59,7 +62,8 @@ const UserManagement: React.FC = () => {
                     password,
                     name,
                     role,
-                    branchId: role === 'admin' ? undefined : branchId
+                    branchId: role === 'admin' ? undefined : branchId,
+                    passwordLastChanged: new Date().toISOString()
                 };
                 await dataService.addUser(newUser);
                 showToast(t('users.createSuccess'), 'success');
@@ -67,9 +71,16 @@ const UserManagement: React.FC = () => {
 
             resetForm();
             loadData();
-        } catch (error) {
-            console.error("Failed to save user", error);
-            showToast('Failed to save user', 'error');
+        } catch (error: any) {
+            console.error("Detailed Save Error:", error);
+            const isSyncError = error.message?.includes('password sync failed');
+            if (isSyncError) {
+                showToast(error.message, 'warning');
+            } else {
+                const fullError = JSON.stringify(error, null, 2);
+                console.error("Full Save Error Object:", fullError);
+                showToast(`Failed to save: ${error.message || 'Unknown error'}. Details logged to console.`, 'error');
+            }
         }
     };
 

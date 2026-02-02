@@ -25,7 +25,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendType, spa
             }}
         >
             <div>
-                <div style={{ color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 850, marginBottom: 'var(--space-1)', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
                     {title}
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: 'var(--space-2)', letterSpacing: '-0.03em' }}>
