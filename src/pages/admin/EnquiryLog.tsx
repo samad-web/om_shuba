@@ -25,6 +25,16 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [products, setProducts] = useState<any[]>([]); // To resolve product names
 
+    // Sale Modal State
+    const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+    const [selectedEnquiryId, setSelectedEnquiryId] = useState<string | null>(null);
+    const [saleData, setSaleData] = useState({
+        amount: 0,
+        notes: '',
+        warrantyStart: new Date().toISOString().split('T')[0],
+        warrantyEnd: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+    });
+
     useEffect(() => {
         loadData();
     }, []);
@@ -51,25 +61,51 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
     const handleStageChange = async (id: string, newStage: PipelineStage) => {
         if (!user) return;
 
-        let amount: number | undefined = undefined;
-        let notes: string | undefined = undefined;
-
         if (newStage === 'Closed-Converted') {
-            const input = window.prompt(t('enquiries.enterSaleAmount'));
-            if (input === null) return; // User cancelled
-            amount = parseFloat(input) || 0;
-            // Maybe ask for notes too?
-            const notesInput = window.prompt(t('enquiries.optionalNotes'));
-            if (notesInput) notes = notesInput;
+            const enquiry = enquiries.find(e => e.id === id);
+            setSelectedEnquiryId(id);
+            setSaleData({
+                amount: enquiry?.closedAmount || 0,
+                notes: '', // Notes are usually new for the closure
+                warrantyStart: enquiry?.warrantyStartDate || new Date().toISOString().split('T')[0],
+                warrantyEnd: enquiry?.warrantyEndDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+            });
+            setIsSaleModalOpen(true);
+            return;
         }
 
         try {
-            await dataService.updateEnquiryStage(id, newStage, user.id, notes, amount);
+            await dataService.updateEnquiryStage(id, newStage, user.id);
             showToast(t('enquiries.stageUpdateSuccess'), 'success');
-            loadData(); // Reload to see changes
+            loadData();
         } catch (error) {
             console.error("Failed to update stage", error);
             showToast('Failed to update stage', 'error');
+        }
+    };
+
+    const handleSaleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !selectedEnquiryId) return;
+
+        try {
+            // Update stage with all sale details
+            await dataService.updateEnquiryStage(
+                selectedEnquiryId,
+                'Closed-Converted',
+                user.id,
+                saleData.notes,
+                saleData.amount,
+                saleData.warrantyStart,
+                saleData.warrantyEnd
+            );
+
+            setIsSaleModalOpen(false);
+            showToast(t('enquiries.stageUpdateSuccess'), 'success');
+            loadData();
+        } catch (error) {
+            console.error("Failed to complete sale", error);
+            showToast('Failed to complete sale', 'error');
         }
     };
 
@@ -122,6 +158,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
             case 'Delivered': return t('stages.delivered');
             case 'Closed-Converted': return t('stages.closedConverted');
             case 'Closed-Not Interested': return t('stages.closedNotInterested');
+            case 'Resolved': return 'Resolved'; // I'll add this to translations if needed
             default: return stage;
         }
     };
@@ -136,6 +173,13 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
     };
 
     if (loading) return <div>{t('common.loading')}</div>;
+
+    const getWarrantyStatus = (e: Enquiry) => {
+        if (e.pipelineStage !== 'Closed-Converted' || !e.warrantyEndDate) return null;
+        const expiry = new Date(e.warrantyEndDate);
+        const now = new Date();
+        return expiry > now ? 'Active' : 'Expired';
+    };
 
     return (
         <div>
@@ -154,6 +198,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                     <option value="Delivered">{t('stages.delivered')}</option>
                     <option value="Closed-Converted">{t('stages.closedConverted')}</option>
                     <option value="Closed-Not Interested">{t('stages.closedNotInterested')}</option>
+                    <option value="Resolved">Resolved</option>
                 </select>
                 {user?.role !== 'branch_admin' && (
                     <select className="input" style={{ width: 'auto' }} value={filterBranch} onChange={e => setFilterBranch(e.target.value)}>
@@ -171,7 +216,9 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.date')}</th>
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.customerName')}</th>
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.product')}</th>
+                            <th style={{ padding: '0.75rem' }}>{t('enquiries.callType')}</th>
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.branch')}</th>
+                            <th style={{ padding: '0.75rem' }}>{t('enquiries.recording')}</th>
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.stage')}</th>
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.intent')}</th>
                             <th style={{ padding: '0.75rem', textAlign: 'center' }}>{t('common.actions')}</th>
@@ -187,6 +234,11 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                                 <td style={{ padding: '0.75rem' }}>
                                     <div style={{ fontWeight: 600 }}>{e.customerName}</div>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{e.phoneNumber}</div>
+                                    {e.complaintNotes && (
+                                        <div style={{ fontSize: '0.75rem', color: '#854d0e', fontStyle: 'italic', marginTop: '0.25rem', background: '#fefce8', padding: '0.2rem 0.4rem', borderRadius: '4px' }}>
+                                            📝 {e.complaintNotes}
+                                        </div>
+                                    )}
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
                                     {(() => {
@@ -196,23 +248,82 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                                     })()}
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <span style={{ fontSize: '1rem' }}>{e.callType === 'Service' ? '🔧' : '💰'}</span>
+                                            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                                                {e.callType === 'Service' ? t('enquiries.service') : t('enquiries.sales')}
+                                            </span>
+                                        </div>
+                                        {e.callType === 'Service' && (
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                {e.warrantyCheck ? `✅ ${t('enquiries.warrantyCheck')}` : `❌ ${t('enquiries.warrantyCheck')}`}
+                                            </div>
+                                        )}
+                                    </div>
+                                </td>
+                                <td style={{ padding: '0.75rem' }}>
                                     {branches.find(b => b.id === e.branchId)?.name || 'N/A'}
+                                </td>
+                                <td style={{ padding: '0.75rem' }}>
+                                    {e.recordingUrl ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <audio controls style={{ height: '30px', width: '120px' }}>
+                                                <source src={e.recordingUrl} type="audio/mpeg" />
+                                                Your browser does not support the audio element.
+                                            </audio>
+                                            <a href={e.recordingUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '4px', borderRadius: '4px', background: 'var(--bg-secondary)', textDecoration: 'none', fontSize: '0.8rem' }} title={t('enquiries.playRecording')}>
+                                                🔗
+                                            </a>
+                                        </div>
+                                    ) : (
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No recording</span>
+                                    )}
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
                                     <select
                                         value={e.pipelineStage}
                                         onChange={(ev) => handleStageChange(e.id, ev.target.value as PipelineStage)}
-                                        style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', fontSize: '0.85rem' }}
+                                        style={{
+                                            padding: '0.4rem',
+                                            borderRadius: '8px',
+                                            border: '1px solid var(--border)',
+                                            width: '100%',
+                                            fontSize: '0.85rem',
+                                            background: e.pipelineStage === 'Closed-Converted' ? '#dcfce7' : e.pipelineStage === 'Resolved' ? '#f0f9ff' : 'white',
+                                            cursor: e.pipelineStage === 'Closed-Converted' ? 'not-allowed' : 'pointer'
+                                        }}
+                                        disabled={e.pipelineStage === 'Closed-Converted'}
                                     >
                                         {[
                                             'New', 'Qualified', 'Forwarded', 'Contacted',
                                             'Demo Scheduled', 'Visit Scheduled', 'Demo/Visit Done',
                                             'Delivery Scheduled', 'Delivered', 'Closed-Converted',
-                                            'Closed-Not Interested'
+                                            'Closed-Not Interested', 'Resolved'
                                         ].map(stage => (
                                             <option key={stage} value={stage}>{getStageLabel(stage)}</option>
                                         ))}
                                     </select>
+                                    {e.pipelineStage === 'Closed-Converted' && e.closedAmount !== undefined && (
+                                        <div style={{ fontSize: '0.75rem', marginTop: '0.4rem', color: '#059669', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <span>💰 Sold: ₹{e.closedAmount.toLocaleString()}</span>
+                                            {e.warrantyEndDate && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <span style={{ color: 'var(--text-muted)', fontWeight: 'normal' }}>🛡️ Until: {new Date(e.warrantyEndDate).toLocaleDateString()}</span>
+                                                    <span style={{
+                                                        padding: '2px 4px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.65rem',
+                                                        background: getWarrantyStatus(e) === 'Active' ? '#dcfce7' : '#fee2e2',
+                                                        color: getWarrantyStatus(e) === 'Active' ? '#166534' : '#991b1b',
+                                                        border: `1px solid ${getWarrantyStatus(e) === 'Active' ? '#bbf7d0' : '#fecaca'}`
+                                                    }}>
+                                                        {getWarrantyStatus(e)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                     {e.tracking && e.tracking.status === 'Scheduled' && (
                                         <div style={{ fontSize: '0.75rem', marginTop: '0.4rem', color: '#ea580c', fontWeight: 500 }}>
                                             📅 {e.tracking.type}: {new Date(e.tracking.scheduledDate).toLocaleString()}
@@ -253,6 +364,44 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                     </tbody>
                 </table>
             </div>
+
+            {isSaleModalOpen && (
+                <div style={{
+                    position: 'fixed', inset: 0,
+                    background: 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(8px) brightness(0.9)',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    zIndex: 2000
+                }}>
+                    <div className="card animate-fade-in" style={{ width: '450px' }}>
+                        <h3 style={{ marginBottom: '1.5rem' }}>🎊 Complete Sale</h3>
+                        <form onSubmit={handleSaleSubmit}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Sale Amount (₹)</label>
+                                <input type="number" className="input" required value={saleData.amount} onChange={e => setSaleData({ ...saleData, amount: Number(e.target.value) })} />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Closure Notes</label>
+                                <textarea className="input" value={saleData.notes} onChange={e => setSaleData({ ...saleData, notes: e.target.value })} placeholder="Any special requests or details..." style={{ height: '80px', paddingTop: '10px' }} />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Warranty Start</label>
+                                    <input type="date" className="input" value={saleData.warrantyStart} onChange={e => setSaleData({ ...saleData, warrantyStart: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Warranty End</label>
+                                    <input type="date" className="input" value={saleData.warrantyEnd} onChange={e => setSaleData({ ...saleData, warrantyEnd: e.target.value })} />
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                <button type="button" className="btn" onClick={() => setIsSaleModalOpen(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-primary">Mark as Sold</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

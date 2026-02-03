@@ -1,4 +1,4 @@
-import type { User, Product, Branch, Enquiry, PipelineStage, Promotion } from '../../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Message, Offer, WhatsAppContent } from '../../types';
 import type { IDataRepository } from '../interfaces/IDataRepository';
 import { MOCK_USERS, MOCK_PRODUCTS, MOCK_BRANCHES } from '../mockData';
 
@@ -8,6 +8,8 @@ const KEYS = {
     BRANCHES: 'tc_branches',
     ENQUIRIES: 'tc_enquiries',
     PROMOTIONS: 'tc_promotions',
+    OFFERS: 'tc_offers',
+    WHATSAPP_CONTENT: 'tc_whatsapp_content',
 };
 
 /**
@@ -21,19 +23,16 @@ export class LocalStorageRepository implements IDataRepository {
     }
 
     private initialize(): void {
-        // Initialize data only once
+        // ... (existing initialization)
         if (!localStorage.getItem(KEYS.USERS)) {
             localStorage.setItem(KEYS.USERS, JSON.stringify(MOCK_USERS));
         }
 
-        // Always sync products (for development)
         localStorage.setItem(KEYS.PRODUCTS, JSON.stringify(MOCK_PRODUCTS));
 
-        // Initialize branches once
         if (!localStorage.getItem(KEYS.BRANCHES)) {
             localStorage.setItem(KEYS.BRANCHES, JSON.stringify(MOCK_BRANCHES));
         } else {
-            // Ensure Hosur Branch exists in local storage for migration
             const currentBranches = JSON.parse(localStorage.getItem(KEYS.BRANCHES) || '[]').filter(Boolean);
             if (!currentBranches.find((b: any) => b && b.id === 'b4')) {
                 const hosurBranch = MOCK_BRANCHES.find(b => b.id === 'b4');
@@ -44,11 +43,9 @@ export class LocalStorageRepository implements IDataRepository {
             }
         }
 
-        // Initialize users
         if (!localStorage.getItem(KEYS.USERS)) {
             localStorage.setItem(KEYS.USERS, JSON.stringify(MOCK_USERS));
         } else {
-            // Ensure hosur-admin exists in local storage for migration
             const currentUsers = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]').filter(Boolean);
             if (!currentUsers.find((u: any) => u && u.username === 'hosur-admin')) {
                 const hosurAdmin = MOCK_USERS.find(u => u.username === 'hosur-admin');
@@ -62,7 +59,6 @@ export class LocalStorageRepository implements IDataRepository {
             localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify([]));
         }
 
-        // Initialize promotions
         if (!localStorage.getItem(KEYS.PROMOTIONS)) {
             const initialPromotions: Promotion[] = [
                 {
@@ -72,17 +68,66 @@ export class LocalStorageRepository implements IDataRepository {
                     validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
                     active: true,
                     createdAt: new Date().toISOString()
-                },
-                {
-                    id: '2',
-                    title: 'New Launch: Milking Machine X1',
-                    description: 'Special introductory price of ₹45,000 only.',
-                    active: true,
-                    createdAt: new Date().toISOString()
                 }
             ];
             localStorage.setItem(KEYS.PROMOTIONS, JSON.stringify(initialPromotions));
         }
+
+        if (!localStorage.getItem(KEYS.OFFERS)) {
+            localStorage.setItem(KEYS.OFFERS, JSON.stringify([]));
+        }
+
+        if (!localStorage.getItem(KEYS.WHATSAPP_CONTENT)) {
+            localStorage.setItem(KEYS.WHATSAPP_CONTENT, JSON.stringify([]));
+        }
+    }
+
+    // ... (existing operations)
+
+    // Offer Operations
+    async getOffers(): Promise<Offer[]> {
+        return (JSON.parse(localStorage.getItem(KEYS.OFFERS) || '[]') as (Offer | null)[]).filter((o): o is Offer => o !== null);
+    }
+
+    async addOffer(offer: Offer): Promise<void> {
+        const offers = await this.getOffers();
+        offers.push(offer);
+        localStorage.setItem(KEYS.OFFERS, JSON.stringify(offers));
+    }
+
+    async updateOffer(offer: Offer): Promise<void> {
+        const offers = await this.getOffers();
+        const updated = offers.map(o => o.id === offer.id ? offer : o);
+        localStorage.setItem(KEYS.OFFERS, JSON.stringify(updated));
+    }
+
+    async deleteOffer(id: string): Promise<void> {
+        const offers = await this.getOffers();
+        const filtered = offers.filter(o => o.id !== id);
+        localStorage.setItem(KEYS.OFFERS, JSON.stringify(filtered));
+    }
+
+    // WhatsApp Content Operations
+    async getWhatsAppContent(): Promise<WhatsAppContent[]> {
+        return (JSON.parse(localStorage.getItem(KEYS.WHATSAPP_CONTENT) || '[]') as (WhatsAppContent | null)[]).filter((c): c is WhatsAppContent => c !== null);
+    }
+
+    async addWhatsAppContent(content: WhatsAppContent): Promise<void> {
+        const contents = await this.getWhatsAppContent();
+        contents.push(content);
+        localStorage.setItem(KEYS.WHATSAPP_CONTENT, JSON.stringify(contents));
+    }
+
+    async updateWhatsAppContent(content: WhatsAppContent): Promise<void> {
+        const contents = await this.getWhatsAppContent();
+        const updated = contents.map(c => c.id === content.id ? content : c);
+        localStorage.setItem(KEYS.WHATSAPP_CONTENT, JSON.stringify(updated));
+    }
+
+    async deleteWhatsAppContent(id: string): Promise<void> {
+        const contents = await this.getWhatsAppContent();
+        const filtered = contents.filter(c => c.id !== id);
+        localStorage.setItem(KEYS.WHATSAPP_CONTENT, JSON.stringify(filtered));
     }
 
     // User Operations
@@ -119,7 +164,6 @@ export class LocalStorageRepository implements IDataRepository {
     }
 
     async logout(): Promise<void> {
-        // No server-side session to invalidate for LocalStorage
         return Promise.resolve();
     }
 
@@ -150,8 +194,7 @@ export class LocalStorageRepository implements IDataRepository {
         localStorage.setItem(KEYS.PRODUCTS, JSON.stringify(updated));
     }
 
-    async deleteProduct(id: string): Promise<void> {
-        // Not implemented in legacy storage, but safe to ignore or throw
+    async deleteProduct(_id: string): Promise<void> {
         throw new Error("Delete not supported in local storage mode");
     }
 
@@ -182,7 +225,6 @@ export class LocalStorageRepository implements IDataRepository {
         const filtered = branches.filter(b => b.id !== branchId);
         localStorage.setItem(KEYS.BRANCHES, JSON.stringify(filtered));
 
-        // Also delete associated branch admin
         const users = await this.getUsers();
         const filteredUsers = users.filter(u => !(u.role === 'branch_admin' && u.branchId === branchId));
         localStorage.setItem(KEYS.USERS, JSON.stringify(filteredUsers));
@@ -214,7 +256,7 @@ export class LocalStorageRepository implements IDataRepository {
         localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(enquiries));
     }
 
-    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number): Promise<void> {
+    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string): Promise<void> {
         const enquiries = await this.getEnquiries();
         const updated = enquiries.map(e => {
             if (e.id === id) {
@@ -222,6 +264,8 @@ export class LocalStorageRepository implements IDataRepository {
                     ...e,
                     pipelineStage: stage,
                     closedAmount: amount !== undefined ? amount : e.closedAmount,
+                    warrantyStartDate: warrantyStart !== undefined ? warrantyStart : e.warrantyStartDate,
+                    warrantyEndDate: warrantyEnd !== undefined ? warrantyEnd : e.warrantyEndDate,
                     history: [...e.history, { stage, timestamp: new Date().toISOString(), userId, notes }]
                 };
             }
@@ -261,28 +305,25 @@ export class LocalStorageRepository implements IDataRepository {
 
     // Feedback Operations
     async addFeedback(feedback: { userId: string; message: string; rating: number }): Promise<void> {
-        // For LocalStorage, we'll just log it or store in a separate key if we really wanted to,
-        // but since this is a transition to Supabase, we can just log or check if a key exists.
-        // Let's create a key for it to be consistent.
         const feedbacks = JSON.parse(localStorage.getItem('tc_feedback') || '[]');
         feedbacks.push({ ...feedback, id: Date.now(), createdAt: new Date().toISOString() });
         localStorage.setItem('tc_feedback', JSON.stringify(feedbacks));
     }
 
-    // Messaging Operations (Stubs for LocalStorage)
-    async sendMessage(message: Omit<import('../../types').Message, 'id' | 'createdAt' | 'isRead'>): Promise<void> {
+    // Messaging Operations
+    async sendMessage(message: Omit<Message, 'id' | 'createdAt' | 'isRead'>): Promise<void> {
         console.log('Mock sending message:', message);
     }
 
-    async getMessages(branchId: string): Promise<import('../../types').Message[]> {
+    async getMessages(_branchId: string): Promise<Message[]> {
         return [];
     }
 
-    async getSentMessages(senderRole: string, senderBranchId?: string): Promise<import('../../types').Message[]> {
+    async getSentMessages(_senderRole: string, _senderBranchId?: string): Promise<Message[]> {
         return [];
     }
 
-    async markMessageAsRead(messageId: string): Promise<void> {
-        console.log('Mock mark read:', messageId);
+    async markMessageAsRead(_messageId: string): Promise<void> {
+        console.log('Mock mark read');
     }
 }

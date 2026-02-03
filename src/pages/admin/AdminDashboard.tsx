@@ -6,6 +6,8 @@ import BranchMaster from './BranchMaster';
 import EnquiryLog from './EnquiryLog';
 import ConversionOverview from './ConversionOverview';
 import PromotionManagement from '../../components/PromotionManagement';
+import OfferManagement from '../../components/OfferManagement';
+import CommunityUpdates from '../../components/whatsapp/CommunityUpdates';
 import { useAuth } from '../../context/AuthContext';
 import { dataService } from '../../services/DataService';
 import { useSettings } from '../../context/SettingsContext';
@@ -15,7 +17,15 @@ const AdminDashboard: React.FC = () => {
     const { user } = useAuth();
     const { t } = useSettings();
     const [activeTab, setActiveTab] = useState('dashboard');
-    const [metrics, setMetrics] = useState({ branchLeads: 0, demosDone: 0, activeProducts: 0 });
+    const [metrics, setMetrics] = useState({
+        branchLeads: 0,
+        salesCalls: 0,
+        serviceCalls: 0,
+        demosDone: 0,
+        activeProducts: 0,
+        closedDeals: 0,
+        totalRevenue: 0
+    });
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
@@ -44,13 +54,21 @@ const AdminDashboard: React.FC = () => {
                 : enquiries;
 
             const branchLeads = filteredEnquiries.length;
+            const salesCalls = filteredEnquiries.filter(e => e.callType === 'Sales' || !e.callType).length;
+            const serviceCalls = filteredEnquiries.filter(e => e.callType === 'Service').length;
 
+            const totalRevenue = filteredEnquiries.reduce((sum, enq) => sum + (enq.closedAmount || 0), 0);
+            const closedDeals = filteredEnquiries.filter(e => e.pipelineStage === 'Closed-Converted').length;
             const demos = filteredEnquiries.filter(e => e.pipelineStage === 'Demo/Visit Done').length;
 
             setMetrics({
                 branchLeads,
+                salesCalls,
+                serviceCalls,
                 demosDone: demos,
-                activeProducts: products.filter(p => p.active).length
+                activeProducts: products.filter(p => p.active).length,
+                closedDeals,
+                totalRevenue
             });
         } catch (error) {
             console.error("Failed to load admin metrics", error);
@@ -115,16 +133,23 @@ const AdminDashboard: React.FC = () => {
                 <StatCard
                     title={t('metrics.branchLeads')}
                     value={metrics.branchLeads.toString()}
-                    trend="+12%"
-                    trendType="up"
+                    trend={`💰 ${metrics.salesCalls} Sales | 🔧 ${metrics.serviceCalls} Service`}
+                    trendType="neutral"
                     sparklineData={[30, 45, 40, 60, 55, 75, 80]}
                 />
                 <StatCard
-                    title={t('metrics.conversion')}
-                    value={metrics.demosDone.toString()} // Using demosDone as a proxy for closed deals for now as per dashboard logic
-                    trend="+15%"
+                    title="Total Revenue" // I should add this to translations later
+                    value={`₹${metrics.totalRevenue.toLocaleString()}`}
+                    trend={`${metrics.closedDeals} Closed Deals`}
                     trendType="up"
-                    sparklineData={[10, 15, 12, 18, 20, 25, 30]}
+                    sparklineData={[10000, 25000, 18000, 45000, 38000, 65000, 80000]}
+                />
+                <StatCard
+                    title={t('metrics.conversion')}
+                    value={`${metrics.branchLeads > 0 ? Math.round((metrics.closedDeals / metrics.branchLeads) * 100) : 0}%`}
+                    trend={`${metrics.closedDeals} / ${metrics.branchLeads} leads`}
+                    trendType="up"
+                    sparklineData={[5, 10, 8, 12, 15, 18, 20]}
                     onClick={() => setActiveTab('conversions')}
                 />
                 <StatCard
@@ -196,6 +221,22 @@ const AdminDashboard: React.FC = () => {
                                 <span style={{ fontSize: '1.5rem' }}>🤝</span>
                                 <span style={{ fontWeight: 850, color: '#FFFFFF' }}>{t('nav.conversions')}</span>
                             </button>
+                            <button
+                                className="btn"
+                                style={{ background: 'var(--bg-secondary)', border: 'none', padding: 'var(--space-4)', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-1)' }}
+                                onClick={() => setActiveTab('offers')}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>🏷️</span>
+                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>Offers</span>
+                            </button>
+                            <button
+                                className="btn"
+                                style={{ background: 'var(--bg-secondary)', border: 'none', padding: 'var(--space-4)', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-1)' }}
+                                onClick={() => setActiveTab('whatsapp')}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>📢</span>
+                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>Updates</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -215,6 +256,8 @@ const AdminDashboard: React.FC = () => {
             case 'enquiries': return <div className="card animate-fade-in"><EnquiryLog role={user?.role === 'branch_admin' ? 'branch_admin' : 'admin'} branchId={user?.role === 'branch_admin' ? user?.branchId : selectedBranchId} /></div>;
             case 'conversions': return <div className="animate-fade-in"><ConversionOverview /></div>;
             case 'promotions': return <div className="card animate-fade-in"><PromotionManagement /></div>;
+            case 'offers': return <div className="card animate-fade-in"><OfferManagement /></div>;
+            case 'whatsapp': return <div className="card animate-fade-in"><CommunityUpdates /></div>;
             case 'dashboard':
             default: return renderDashboard();
         }

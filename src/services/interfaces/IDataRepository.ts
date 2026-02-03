@@ -1,4 +1,4 @@
-import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Message } from '../../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Message, Offer, WhatsAppContent } from '../../types';
 
 /**
  * Data Repository Interface
@@ -36,7 +36,7 @@ export interface IDataRepository {
     getEnquiriesByBranch(branchId: string): Promise<Enquiry[]>;
     getEnquiriesByUser(userId: string): Promise<Enquiry[]>;
     addEnquiry(enquiry: Enquiry): Promise<void>;
-    updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number): Promise<void>;
+    updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string): Promise<void>;
     deleteEnquiry(id: string): Promise<void>;
 
     // Promotion Operations
@@ -44,6 +44,18 @@ export interface IDataRepository {
     addPromotion(promotion: Promotion): Promise<void>;
     updatePromotion(promotion: Promotion): Promise<void>;
     deletePromotion(id: string): Promise<void>;
+
+    // Offer Operations
+    getOffers(): Promise<Offer[]>;
+    addOffer(offer: Offer): Promise<void>;
+    updateOffer(offer: Offer): Promise<void>;
+    deleteOffer(id: string): Promise<void>;
+
+    // WhatsApp Content Operations
+    getWhatsAppContent(): Promise<WhatsAppContent[]>;
+    addWhatsAppContent(content: WhatsAppContent): Promise<void>;
+    updateWhatsAppContent(content: WhatsAppContent): Promise<void>;
+    deleteWhatsAppContent(id: string): Promise<void>;
 
     // Feedback Operations
     addFeedback(feedback: { userId: string; message: string; rating: number }): Promise<void>;

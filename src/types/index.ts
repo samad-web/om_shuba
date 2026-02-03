@@ -24,6 +24,8 @@ export interface Product {
   nameTa?: string;
   categoryTa?: string;
   shortDescriptionTa?: string;
+  imageUrl?: string;
+  specifications?: Record<string, string>;
 }
 
 export interface Branch {
@@ -45,7 +47,8 @@ export type PipelineStage =
   | 'Delivery Scheduled'
   | 'Delivered'
   | 'Closed-Converted'
-  | 'Closed-Not Interested';
+  | 'Closed-Not Interested'
+  | 'Resolved';
 
 export type PurchaseIntent = 'Ready to Buy' | 'Needs Demo' | 'General Enquiry';
 
@@ -78,6 +81,15 @@ export interface Enquiry {
   createdAt: string; // ISO date string
   closedAmount?: number; // Final sale value for converted leads
   history: EnquiryHistory[];
+  // Phase 2 additions
+  callId?: string;
+  recordingUrl?: string;
+  callType?: 'Sales' | 'Service';
+  warrantyCheck?: boolean;
+  complaintNotes?: string;
+  warrantyStartDate?: string;
+  warrantyEndDate?: string;
+  offerId?: string; // Linked offer
 }
 
 export interface Promotion {
@@ -98,4 +110,29 @@ export interface Message {
   createdAt: string;
   isRead: boolean;
   senderName?: string; // Optional for UI display
+}
+
+export interface Offer {
+  id: string;
+  title: string;
+  description: string;
+  discountAmount?: number;
+  discountPercentage?: number;
+  validFrom: string;
+  validTo: string;
+  productId?: string; // Applicable to specific product or all
+  active: boolean;
+  createdAt: string;
+}
+
+export interface WhatsAppContent {
+  id: string;
+  title: string;
+  content: string; // Text content
+  mediaUrl?: string; // Image or Video URL
+  mediaType?: 'image' | 'video';
+  scheduledAt?: string; // ISO date string
+  status: 'draft' | 'scheduled' | 'sent';
+  createdAt: string;
+  createdBy: string;
 }

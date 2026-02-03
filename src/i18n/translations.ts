@@ -153,6 +153,15 @@ export const translations: Record<string, any> = {
             noEnquiries: "No enquiries found",
             date: "Date",
             stage: "Stage",
+            // Phase 2
+            callType: "Call Type",
+            sales: "Sales",
+            service: "Service",
+            warrantyCheck: "Warranty Check",
+            complaintNotes: "Complaint Notes",
+            warrantyInfo: "Warranty Info",
+            recording: "Recording",
+            playRecording: "Play Recording",
         },
         users: {
             title: "Staff Management",
@@ -455,6 +464,15 @@ export const translations: Record<string, any> = {
             noEnquiries: "விசாரணைகள் எதுவும் காணப்படவில்லை",
             date: "தேதி",
             stage: "நிலை",
+            // Phase 2
+            callType: "அழைப்பு வகை",
+            sales: "விற்பனை",
+            service: "சேவை",
+            warrantyCheck: "உத்தரவாத சரிபார்ப்பு",
+            complaintNotes: "புகார் குறிப்புகள்",
+            warrantyInfo: "உத்தரவாத விவரம்",
+            recording: "பதிவு",
+            playRecording: "பதிவை இயக்கு",
         },
         users: {
             title: "பணியாளர் மேலாண்மை",

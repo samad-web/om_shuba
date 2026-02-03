@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { IDataRepository } from '../interfaces/IDataRepository';
-import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, EnquiryHistory } from '../../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, EnquiryHistory, Offer } from '../../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -43,7 +43,9 @@ export class SupabaseRepository implements IDataRepository {
             branchId: data.branch_id,
             nameTa: data.name_ta,
             categoryTa: data.category_ta,
-            shortDescriptionTa: data.short_description_ta
+            shortDescriptionTa: data.short_description_ta,
+            imageUrl: data.image_url,
+            specifications: data.specifications || {}
         };
     }
 
@@ -70,7 +72,16 @@ export class SupabaseRepository implements IDataRepository {
             createdBy: data.created_by,
             createdAt: data.created_at,
             closedAmount: data.closed_amount,
-            history: history
+            history: history,
+            // Phase 2 additions
+            callId: data.call_id,
+            recordingUrl: data.recording_url,
+            callType: data.call_type,
+            warrantyCheck: data.warranty_check,
+            complaintNotes: data.complaint_notes,
+            warrantyStartDate: data.warranty_start_date,
+            warrantyEndDate: data.warranty_end_date,
+            offerId: data.offer_id
         };
     }
 
@@ -90,7 +101,16 @@ export class SupabaseRepository implements IDataRepository {
             pipeline_stage: enquiry.pipelineStage,
             created_by: enquiry.createdBy,
             created_at: enquiry.createdAt,
-            closed_amount: enquiry.closedAmount
+            closed_amount: enquiry.closedAmount,
+            // Phase 2
+            call_id: enquiry.callId,
+            recording_url: enquiry.recordingUrl,
+            call_type: enquiry.callType,
+            warranty_check: enquiry.warrantyCheck,
+            complaint_notes: enquiry.complaintNotes,
+            warranty_start_date: enquiry.warrantyStartDate,
+            warranty_end_date: enquiry.warrantyEndDate,
+            offer_id: enquiry.offerId
         }]);
 
         if (enqError) throw enqError;
@@ -108,9 +128,11 @@ export class SupabaseRepository implements IDataRepository {
         }
     }
 
-    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number): Promise<void> {
+    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string): Promise<void> {
         const updates: any = { pipeline_stage: stage };
         if (amount !== undefined) updates.closed_amount = amount;
+        if (warrantyStart !== undefined) updates.warranty_start_date = warrantyStart;
+        if (warrantyEnd !== undefined) updates.warranty_end_date = warrantyEnd;
 
         const { error: enqError } = await this.supabase
             .from('enquiries')
@@ -327,7 +349,9 @@ export class SupabaseRepository implements IDataRepository {
             branch_id: product.branchId,
             name_ta: product.nameTa,
             category_ta: product.categoryTa,
-            short_description_ta: product.shortDescriptionTa
+            short_description_ta: product.shortDescriptionTa,
+            image_url: product.imageUrl,
+            specifications: product.specifications || {}
         }]);
 
         if (error) {
@@ -348,7 +372,9 @@ export class SupabaseRepository implements IDataRepository {
                     branch_id: product.branchId,
                     name_ta: product.nameTa,
                     category_ta: product.categoryTa,
-                    short_description_ta: product.shortDescriptionTa
+                    short_description_ta: product.shortDescriptionTa,
+                    image_url: product.imageUrl,
+                    specifications: product.specifications || {}
                 }]);
 
                 if (!retryError) {
@@ -375,7 +401,9 @@ export class SupabaseRepository implements IDataRepository {
                 branch_id: product.branchId,
                 name_ta: product.nameTa,
                 category_ta: product.categoryTa,
-                short_description_ta: product.shortDescriptionTa
+                short_description_ta: product.shortDescriptionTa,
+                image_url: product.imageUrl,
+                specifications: product.specifications || {}
             })
             .eq('id', product.id);
         if (error) throw error;
@@ -642,6 +670,108 @@ export class SupabaseRepository implements IDataRepository {
             .from('branch_messages')
             .update({ is_read: true })
             .eq('id', messageId);
+        if (error) throw error;
+    }
+
+    // Offer Operations
+    async getOffers(): Promise<import('../../types').Offer[]> {
+        const { data, error } = await this.supabase.from('offers').select('*');
+        if (error) throw error;
+        return (data || []).map(d => ({
+            id: d.id,
+            title: d.title,
+            description: d.description,
+            discountAmount: d.discount_amount,
+            discountPercentage: d.discount_percentage,
+            validFrom: d.valid_from,
+            validTo: d.valid_to,
+            productId: d.product_id,
+            active: d.active,
+            createdAt: d.created_at
+        }));
+    }
+
+    async addOffer(offer: Offer): Promise<void> {
+        const { error } = await this.supabase.from('offers').insert([{
+            id: offer.id,
+            title: offer.title,
+            description: offer.description,
+            discount_amount: offer.discountAmount,
+            discount_percentage: offer.discountPercentage,
+            valid_from: offer.validFrom,
+            valid_to: offer.validTo,
+            product_id: offer.productId,
+            active: offer.active,
+            created_at: offer.createdAt
+        }]);
+        if (error) throw error;
+    }
+
+    async updateOffer(offer: Offer): Promise<void> {
+        const { error } = await this.supabase.from('offers').update({
+            title: offer.title,
+            description: offer.description,
+            discount_amount: offer.discountAmount,
+            discount_percentage: offer.discountPercentage,
+            valid_from: offer.validFrom,
+            valid_to: offer.validTo,
+            product_id: offer.productId,
+            active: offer.active
+        }).eq('id', offer.id);
+        if (error) throw error;
+    }
+
+    async deleteOffer(id: string): Promise<void> {
+        const { error } = await this.supabase.from('offers').delete().eq('id', id);
+        if (error) throw error;
+    }
+
+    // WhatsApp Content Operations
+    async getWhatsAppContent(): Promise<import('../../types').WhatsAppContent[]> {
+        const { data, error } = await this.supabase.from('whatsapp_content').select('*');
+        if (error) throw error;
+        return (data || []).map(d => ({
+            id: d.id,
+            title: d.title,
+            content: d.content,
+            mediaUrl: d.media_url,
+            mediaType: d.media_type,
+            scheduledAt: d.scheduled_at,
+            status: d.status,
+            createdAt: d.created_at,
+            createdBy: d.created_by
+        }));
+    }
+
+    async addWhatsAppContent(content: import('../../types').WhatsAppContent): Promise<void> {
+        const { error } = await this.supabase.from('whatsapp_content').insert([{
+            id: content.id,
+            title: content.title,
+            content: content.content,
+            media_url: content.mediaUrl,
+            media_type: content.mediaType,
+            scheduled_at: content.scheduledAt,
+            status: content.status,
+            created_at: content.createdAt,
+            created_by: content.createdBy
+        }]);
+        if (error) throw error;
+    }
+
+    async updateWhatsAppContent(content: import('../../types').WhatsAppContent): Promise<void> {
+        const { error } = await this.supabase.from('whatsapp_content').update({
+            title: content.title,
+            content: content.content,
+            media_url: content.mediaUrl,
+            media_type: content.mediaType,
+            scheduled_at: content.scheduledAt,
+            status: content.status
+        }).eq('id', content.id);
+        if (error) throw error;
+    }
+
+    async deleteWhatsAppContent(id: string): Promise<void> {
+        const { error } = await this.supabase.from('whatsapp_content').delete().eq('id', id);
         if (error) throw error;
     }
 }

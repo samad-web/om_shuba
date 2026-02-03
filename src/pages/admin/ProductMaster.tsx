@@ -23,7 +23,8 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
 
     // Form State
     const [formData, setFormData] = useState<Partial<Product>>({
-        name: '', sku: '', category: '', shortDescription: '', priceRange: '', demoUrl: '', active: true
+        name: '', sku: '', category: '', shortDescription: '', priceRange: '', demoUrl: '', active: true,
+        imageUrl: '', specifications: {}
     });
 
     useEffect(() => {
@@ -152,11 +153,11 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
         setUploadResult(null);
     };
 
-    const getLocalizedContent = (product: Product, field: 'name' | 'category' | 'shortDescription') => {
+    const getLocalizedContent = (product: Product, field: 'name' | 'category' | 'shortDescription'): string => {
         if (language === 'ta') {
-            return product[`${field}Ta` as keyof Product] || product[field];
+            return (product[`${field}Ta` as keyof Product] as string) || (product[field] as string);
         }
-        return product[field];
+        return product[field] as string;
     };
 
     // Group products by category
@@ -334,9 +335,33 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.priceRange')}</label>
                                 <input className="input" required value={formData.priceRange} onChange={e => setFormData({ ...formData, priceRange: e.target.value })} placeholder={t('products.pricePlaceholder')} />
                             </div>
-                            <div style={{ marginBottom: '1.5rem' }}>
+                            <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{t('products.demoUrl')}</label>
                                 <input className="input" value={formData.demoUrl || ''} onChange={e => setFormData({ ...formData, demoUrl: e.target.value })} placeholder={t('products.demoUrlPlaceholder')} />
+                            </div>
+
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Product Image URL</label>
+                                <input className="input" value={formData.imageUrl || ''} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} placeholder="https://example.com/image.jpg" />
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Specifications (Key: Value)</label>
+                                <textarea
+                                    className="input"
+                                    value={Object.entries(formData.specifications || {}).map(([k, v]) => `${k}: ${v}`).join('\n')}
+                                    onChange={e => {
+                                        const specs: Record<string, string> = {};
+                                        e.target.value.split('\n').forEach(line => {
+                                            const [k, v] = line.split(':').map(s => s.trim());
+                                            if (k && v) specs[k] = v;
+                                        });
+                                        setFormData({ ...formData, specifications: specs });
+                                    }}
+                                    placeholder="Engine: Diesel 10HP&#10;Capacity: 500 liters"
+                                    style={{ height: '80px', paddingTop: '10px' }}
+                                />
+                                <small style={{ color: 'var(--text-muted)' }}>Enter one per line, e.g., Color: Red</small>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                                 <button type="button" className="btn" onClick={() => setIsModalOpen(false)}>{t('common.cancel')}</button>

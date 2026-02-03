@@ -4,12 +4,13 @@ interface StatCardProps {
     title: string;
     value: string;
     trend: string;
-    trendType: 'up' | 'down';
+    trendType: 'up' | 'down' | 'neutral' | 'info';
+    trendLabel?: string;
     sparklineData: number[];
     onClick?: () => void;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendType, sparklineData, onClick }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendType, trendLabel, sparklineData, onClick }) => {
     return (
         <div
             className={`card animate-fade-in ${onClick ? 'clickable-card' : ''}`}
@@ -36,15 +37,15 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendType, spa
                     alignItems: 'center',
                     gap: '4px',
                     fontSize: '0.75rem',
-                    color: trendType === 'up' ? 'var(--success)' : 'var(--danger)',
+                    color: trendType === 'up' ? 'var(--success)' : trendType === 'down' ? 'var(--danger)' : 'var(--primary)',
                     fontWeight: 700,
-                    backgroundColor: trendType === 'up' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    backgroundColor: trendType === 'up' ? 'rgba(16, 185, 129, 0.1)' : trendType === 'down' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(22, 163, 74, 0.1)',
                     padding: '2px 8px',
                     borderRadius: 'var(--radius-full)'
                 }}>
-                    <span style={{ fontSize: '1rem', lineHeight: 1 }}>{trendType === 'up' ? '↗' : '↘'}</span>
+                    <span style={{ fontSize: '1rem', lineHeight: 1 }}>{trendType === 'up' ? '↗' : trendType === 'down' ? '↘' : '•'}</span>
                     {trend}
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 500, marginLeft: '2px' }}>than last month</span>
+                    {trendLabel && <span style={{ color: 'var(--text-muted)', fontWeight: 500, marginLeft: '2px' }}>{trendLabel}</span>}
                 </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '48px', alignSelf: 'center' }}>
@@ -54,7 +55,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendType, spa
                         style={{
                             width: '4px',
                             height: `${Math.max(20, val)}%`,
-                            background: trendType === 'up' ? 'var(--primary)' : 'var(--danger)',
+                            background: trendType === 'up' ? 'var(--primary)' : trendType === 'down' ? 'var(--danger)' : 'var(--primary)',
                             borderRadius: '2px',
                             opacity: 0.2 + (i / sparklineData.length) * 0.8,
                             transition: 'height 1s ease-out',

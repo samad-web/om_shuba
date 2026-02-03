@@ -23,7 +23,6 @@ const OwnerDashboard: React.FC = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [loading, setLoading] = useState(true);
 
-
     // Messaging State
     const [showMessaging, setShowMessaging] = useState(false);
 
@@ -36,7 +35,9 @@ const OwnerDashboard: React.FC = () => {
         branchDensity: { name: '', count: 0 },
         leadQuality: 0,
         urgentActions: 0,
-        totalRevenue: 0
+        totalRevenue: 0,
+        salesCalls: 0,
+        serviceCalls: 0
     });
 
     // Data for export
@@ -129,7 +130,9 @@ const OwnerDashboard: React.FC = () => {
                 branchDensity: { name: topBranchName, count: topBranchEntry?.[1] || 0 },
                 leadQuality: qualityIndex,
                 urgentActions: urgent || 5,
-                totalRevenue: totalRev
+                totalRevenue: totalRev,
+                salesCalls: enquiries.filter(e => e.callType === 'Sales' || !e.callType).length,
+                serviceCalls: enquiries.filter(e => e.callType === 'Service').length
             });
         } catch (error) {
             console.error("Failed to load owner dashboard data", error);
@@ -186,7 +189,9 @@ const OwnerDashboard: React.FC = () => {
                             <StatCard
                                 title={t('metrics.activePipeline')}
                                 value={metrics.activePipeline.toString()}
-                                trend="8.4%" trendType="up"
+                                trend={`💰 ${metrics.salesCalls} Sales | 🔧 ${metrics.serviceCalls} Service`}
+                                trendType="info"
+                                trendLabel=""
                                 sparklineData={[20, 30, 25, 45, 40, 55, 65]}
                             />
                             <StatCard

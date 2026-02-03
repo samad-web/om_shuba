@@ -49,6 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                 { id: 'products', label: t('nav.products'), icon: '📦' },
                 { id: 'branches', label: t('nav.branches'), icon: '🏢' },
                 { id: 'promotions', label: t('nav.promotions'), icon: '📢' },
+                { id: 'offers', label: 'Offers', icon: '🏷️' },
                 { id: 'users', label: t('nav.users'), icon: '👥' },
             ];
         }
@@ -58,6 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                 { id: 'enquiries', label: t('nav.enquiries'), icon: '📑' },
                 { id: 'products', label: t('nav.products'), icon: '📦' },
                 { id: 'promotions', label: t('nav.promotions'), icon: '📢' },
+                { id: 'offers', label: 'Offers', icon: '🏷️' },
                 { id: 'conversions', label: t('nav.conversions'), icon: '💰' },
             ];
         }
