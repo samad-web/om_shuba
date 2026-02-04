@@ -10,6 +10,7 @@ const OfferManagement: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState<Partial<Offer>>({
@@ -69,23 +70,63 @@ const OfferManagement: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log("Submitting offer data...", formData);
         try {
+            // Clean up data
+            const cleanedData = {
+                ...formData,
+                productId: formData.productId === '' ? null : formData.productId,
+                discountAmount: formData.discountAmount || null,
+                discountPercentage: formData.discountPercentage || null,
+                validTo: formData.validTo === '' ? null : formData.validTo
+            };
+
+            // UUID Fallback generator
+            const generateUUID = () => {
+                try {
+                    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                        return crypto.randomUUID();
+                    }
+                    throw new Error('crypto.randomUUID not available');
+                } catch (e) {
+                    console.warn('Using UUID fallback:', e);
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                }
+            };
+
             const offerData: Offer = {
-                ...(formData as Offer),
-                id: editingOffer ? editingOffer.id : 'off_' + Date.now(),
+                ...(cleanedData as Offer),
+                id: editingOffer ? editingOffer.id : generateUUID(),
                 createdAt: editingOffer ? editingOffer.createdAt : new Date().toISOString()
             };
 
-            if (editingOffer) {
-                await dataService.updateOffer(offerData);
-            } else {
-                await dataService.addOffer(offerData);
+            console.log("Final offer object to save:", offerData);
+
+            setIsSaving(true);
+            try {
+                if (editingOffer) {
+                    console.log("Calling dataService.updateOffer...");
+                    await dataService.updateOffer(offerData);
+                } else {
+                    console.log("Calling dataService.addOffer...");
+                    await dataService.addOffer(offerData);
+                }
+                console.log("dataService call completed successfully!");
+                alert("Success: Offer saved!");
+                setIsModalOpen(false);
+                loadData();
+            } catch (dbError: any) {
+                console.error("Database operation failed:", dbError);
+                alert("Database Error: " + (dbError.message || JSON.stringify(dbError)));
             }
-            setIsModalOpen(false);
-            loadData();
-        } catch (error) {
-            console.error("Failed to save offer", error);
-            alert("Failed to save offer");
+        } catch (error: any) {
+            console.error("Failed to save offer general error:", error);
+            alert("Failed to save offer: " + (error.message || "Unknown error"));
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -179,36 +220,63 @@ const OfferManagement: React.FC = () => {
 
             {isModalOpen && (
                 <div style={{
-                    position: 'fixed', inset: 0,
-                    background: 'rgba(0,0,0,0.4)',
-                    backdropFilter: 'blur(8px) brightness(0.9)',
-                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    zIndex: 2000
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(12px) brightness(0.8)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 2000,
+                    padding: '2rem'
                 }}>
-                    <div className="card animate-fade-in" style={{ width: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h3 style={{ marginBottom: '1.5rem' }}>{editingOffer ? 'Edit Offer' : 'Create New Offer'}</h3>
+                    <div className="card animate-fade-in" style={{
+                        width: '100%',
+                        maxWidth: '550px',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        padding: '2rem',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        position: 'relative'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>
+                                {editingOffer ? 'Edit Offer' : 'Create New Offer'}
+                            </h3>
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.5rem' }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
                         <form onSubmit={handleSubmit}>
-                            <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ marginBottom: '1.25rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Title</label>
                                 <input className="input" required value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="e.g. Harvest Special Discount" />
                             </div>
-                            <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ marginBottom: '1.25rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Description</label>
-                                <textarea className="input" required value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Briefly describe the offer..." style={{ height: '80px', paddingTop: '10px' }} />
+                                <textarea className="input" required value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Briefly describe the offer..." style={{ height: '100px', paddingTop: '10px' }} />
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Flat Discount (₹)</label>
-                                    <input type="number" className="input" value={formData.discountAmount || ''} onChange={e => setFormData({ ...formData, discountAmount: e.target.value ? Number(e.target.value) : undefined })} placeholder="optional" />
+                                    <input type="number" className="input" value={formData.discountAmount || ''} onChange={e => setFormData({ ...formData, discountAmount: e.target.value ? Number(e.target.value) : null })} placeholder="optional" />
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Percentage (%)</label>
-                                    <input type="number" className="input" value={formData.discountPercentage || ''} onChange={e => setFormData({ ...formData, discountPercentage: e.target.value ? Number(e.target.value) : undefined })} placeholder="optional" />
+                                    <input type="number" className="input" value={formData.discountPercentage || ''} onChange={e => setFormData({ ...formData, discountPercentage: e.target.value ? Number(e.target.value) : null })} placeholder="optional" />
                                 </div>
                             </div>
 
-                            <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ marginBottom: '1.25rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Applicable Product</label>
                                 <select className="input" value={formData.productId || ''} onChange={e => setFormData({ ...formData, productId: e.target.value })}>
                                     <option value="">All Products</option>
@@ -216,20 +284,22 @@ const OfferManagement: React.FC = () => {
                                 </select>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '2rem' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Valid From</label>
                                     <input type="date" className="input" required value={formData.validFrom} onChange={e => setFormData({ ...formData, validFrom: e.target.value })} />
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Valid Until</label>
-                                    <input type="date" className="input" value={formData.validTo} onChange={e => setFormData({ ...formData, validTo: e.target.value })} />
+                                    <input type="date" className="input" value={formData.validTo || ''} onChange={e => setFormData({ ...formData, validTo: e.target.value })} />
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                                <button type="button" className="btn" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary">Save Offer</button>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                <button type="button" className="btn" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancel</button>
+                                <button type="submit" className="btn btn-primary" disabled={isSaving} style={{ minWidth: '120px' }}>
+                                    {isSaving ? 'Saving...' : 'Save Offer'}
+                                </button>
                             </div>
                         </form>
                     </div>

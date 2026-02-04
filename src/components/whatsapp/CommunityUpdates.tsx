@@ -6,6 +6,7 @@ import { dataService } from '../../services/DataService';
 import type { WhatsAppContent } from '../../types';
 
 const CommunityUpdates: React.FC = () => {
+    console.log('🚀 CommunityUpdates component is rendering!');
     const { user } = useAuth();
     const { t } = useSettings();
     const { showToast } = useToast();

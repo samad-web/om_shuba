@@ -44,6 +44,8 @@ const TelecallerDashboard: React.FC = () => {
     const [warrantyCheck, setWarrantyCheck] = useState(false);
     const [complaintNotes, setComplaintNotes] = useState('');
     const [offerId, setOfferId] = useState('');
+    const [callId, setCallId] = useState('');
+    const [recordingUrl, setRecordingUrl] = useState('');
 
     const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,13 +97,17 @@ const TelecallerDashboard: React.FC = () => {
 
                 const start = new Date(e.warrantyStartDate);
                 const now = new Date();
-                const monthsDiff = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
 
-                // Show reminder if it's exactly 6 months or 12 months (or slightly past)
-                // and hasn't been "serviced" recently? (For simplicity, just show based on date)
-                return monthsDiff === 6 || monthsDiff === 12;
+                // Calculate months difference accurately
+                const yearsDiff = now.getFullYear() - start.getFullYear();
+                const monthsDiff = now.getMonth() - start.getMonth();
+                const totalMonths = yearsDiff * 12 + monthsDiff;
+
+                // Show reminder if it's 6+ months old
+                return totalMonths >= 6;
             });
-            setServiceReminders(reminders);
+            // Sort by most recent purchase first
+            setServiceReminders(reminders.sort((a, b) => new Date(b.warrantyStartDate!).getTime() - new Date(a.warrantyStartDate!).getTime()));
         } catch (error) {
             console.error("Failed to load enquiries", error);
         }
@@ -143,16 +149,20 @@ const TelecallerDashboard: React.FC = () => {
                 callType,
                 warrantyCheck: callType === 'Service' ? warrantyCheck : undefined,
                 complaintNotes: callType === 'Service' ? complaintNotes : undefined,
-                offerId: callType === 'Sales' ? offerId : undefined
+                offerId: (callType === 'Sales' && offerId) ? offerId : undefined,
+                callId: callId || undefined,
+                recordingUrl: recordingUrl || undefined
             };
 
             await dataService.addEnquiry(newEnquiry);
             setCustomerName(''); setPhone(''); setLocation(''); setBranchId(''); setSelectedProduct(null);
             setCallType('Sales'); setWarrantyCheck(false); setComplaintNotes(''); setOfferId('');
+            setCallId(''); setRecordingUrl('');
             showToast(t('enquiries.captureSuccess'), 'success');
             loadMyEnquiries();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to save enquiry", error);
+            showToast(`Error: ${error.message || 'Failed to save enquiry'}`, 'error');
         }
     };
 
@@ -360,17 +370,28 @@ const TelecallerDashboard: React.FC = () => {
                         </div>
 
                         {callType === 'Sales' && (
-                            <div style={{ marginBottom: '0.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Applied Special Offer</label>
-                                <select className="input" value={offerId} onChange={e => setOfferId(e.target.value)}>
-                                    <option value="">No Offer</option>
-                                    {offers
-                                        .filter(o => !o.productId || o.productId === selectedProduct?.id)
-                                        .map(o => <option key={o.id} value={o.id}>{o.title}</option>)
-                                    }
-                                </select>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '0.5rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Applied Special Offer</label>
+                                    <select className="input" value={offerId} onChange={e => setOfferId(e.target.value)}>
+                                        <option value="">No Offer</option>
+                                        {offers
+                                            .filter(o => !o.productId || o.productId === selectedProduct?.id)
+                                            .map(o => <option key={o.id} value={o.id}>{o.title}</option>)
+                                        }
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Call ID (Manual for Testing)</label>
+                                    <input className="input" value={callId} onChange={e => setCallId(e.target.value)} placeholder="e.g. CALL-123" />
+                                </div>
                             </div>
                         )}
+
+                        <div style={{ marginBottom: '0.5rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Recording URL (Manual for Testing)</label>
+                            <input className="input" value={recordingUrl} onChange={e => setRecordingUrl(e.target.value)} placeholder="https://example.com/audio.mp3" />
+                        </div>
 
                         <div>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem' }}>{t('enquiries.callType')}</label>
@@ -502,40 +523,47 @@ const TelecallerDashboard: React.FC = () => {
                 {/* Service Reminders List */}
                 <div id="section-reminders" className="card" style={{ display: 'flex', flexDirection: 'column', height: 'fit-content', scrollMarginTop: '100px', border: serviceReminders.length > 0 ? '1px solid #fed7aa' : '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: serviceReminders.length > 0 ? '#fff7ed' : 'transparent', padding: '0.5rem', borderRadius: '8px' }}>
-                        <h4 style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h4 style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: serviceReminders.length > 0 ? '#1f2937' : 'inherit' }}>
                             🔔 {t('telecaller.serviceReminders')}
                             {serviceReminders.length > 0 && <span style={{ background: '#ea580c', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem' }}>{serviceReminders.length}</span>}
                         </h4>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {serviceReminders.map(e => (
-                            <div key={e.id} style={{ padding: '1rem', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{e.customerName}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                        {products.find(p => p.id === e.productId)?.name || e.productId}
+                        {serviceReminders.map(e => {
+                            const start = new Date(e.warrantyStartDate || '');
+                            const now = new Date();
+                            const totalMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+                            const type = totalMonths >= 12 ? '12' : '6';
+
+                            return (
+                                <div key={e.id} style={{ padding: '1rem', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{e.customerName}</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                            {products.find(p => p.id === e.productId)?.name || e.productId}
+                                        </div>
+                                        <div style={{ fontSize: '0.7rem', marginTop: '4px', color: '#ea580c', fontWeight: 700 }}>
+                                            ✨ {t('telecaller.serviceDue').replace('{0}', type)}
+                                        </div>
                                     </div>
-                                    <div style={{ fontSize: '0.7rem', marginTop: '4px', color: '#ea580c', fontWeight: 600 }}>
-                                        📅 Purchased: {new Date(e.warrantyStartDate || '').toLocaleDateString()}
-                                    </div>
+                                    <button className="btn btn-primary" style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }} onClick={() => {
+                                        setCustomerName(e.customerName);
+                                        setPhone(e.phoneNumber);
+                                        setLocation(e.location);
+                                        setBranchId(e.branchId);
+                                        const prod = products.find(p => p.id === e.productId);
+                                        if (prod) setSelectedProduct(prod);
+                                        setCallType('Service');
+                                        setComplaintNotes(`${t('telecaller.serviceDue').replace('{0}', type)} (Purchased: ${new Date(e.warrantyStartDate || '').toLocaleDateString()})`);
+                                        showToast('Ready to capture follow-up!', 'success');
+                                        window.scrollTo({ top: document.getElementById('section-products')?.offsetTop || 0, behavior: 'smooth' });
+                                    }}>Call Now</button>
                                 </div>
-                                <button className="btn btn-primary" style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }} onClick={() => {
-                                    setCustomerName(e.customerName);
-                                    setPhone(e.phoneNumber);
-                                    setLocation(e.location);
-                                    setBranchId(e.branchId);
-                                    const prod = products.find(p => p.id === e.productId);
-                                    if (prod) setSelectedProduct(prod);
-                                    setCallType('Service');
-                                    setComplaintNotes(`Routine Service Reminder (Purchased: ${new Date(e.warrantyStartDate || '').toLocaleDateString()})`);
-                                    showToast('Ready to capture follow-up!', 'success');
-                                    window.scrollTo({ top: document.getElementById('section-products')?.offsetTop || 0, behavior: 'smooth' });
-                                }}>{t('common.action')}</button>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {serviceReminders.length === 0 && (
                             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                No pending service reminders for today.
+                                {t('telecaller.noReminders')}
                             </div>
                         )}
                     </div>
@@ -546,7 +574,7 @@ const TelecallerDashboard: React.FC = () => {
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'enquiries': return <div className="card animate-fade-in" style={{ height: 'auto' }}><EnquiryLog role="telecaller" /></div>;
+            case 'enquiries': return <div className="card animate-fade-in" style={{ height: 'auto' }}><EnquiryLog role="telecaller" onUpdate={loadData} /></div>;
             case 'conversions': return <div className="animate-fade-in"><ConversionOverview /></div>;
             case 'dashboard':
             default: return renderDashboard();

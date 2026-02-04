@@ -1,0 +1,30 @@
+[
+  {
+    "username": "caller1",
+    "role": "telecaller"
+  },
+  {
+    "username": "admin",
+    "role": "admin"
+  },
+  {
+    "username": "caller2",
+    "role": "telecaller"
+  },
+  {
+    "username": "admin_periamuthu",
+    "role": "branch_admin"
+  },
+  {
+    "username": "admin_hosur",
+    "role": "branch_admin"
+  },
+  {
+    "username": "admin_attrupalam",
+    "role": "branch_admin"
+  },
+  {
+    "username": "admin_tirupathur",
+    "role": "branch_admin"
+  }
+]

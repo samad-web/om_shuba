@@ -116,11 +116,11 @@ export interface Offer {
   id: string;
   title: string;
   description: string;
-  discountAmount?: number;
-  discountPercentage?: number;
+  discountAmount?: number | null;
+  discountPercentage?: number | null;
   validFrom: string;
-  validTo: string;
-  productId?: string; // Applicable to specific product or all
+  validTo?: string | null;
+  productId?: string | null;
   active: boolean;
   createdAt: string;
 }

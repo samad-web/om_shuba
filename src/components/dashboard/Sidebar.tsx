@@ -50,6 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                 { id: 'branches', label: t('nav.branches'), icon: '🏢' },
                 { id: 'promotions', label: t('nav.promotions'), icon: '📢' },
                 { id: 'offers', label: 'Offers', icon: '🏷️' },
+                { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
                 { id: 'users', label: t('nav.users'), icon: '👥' },
             ];
         }
@@ -116,7 +117,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                 {navItems.map(item => (
                     <button
                         key={item.id}
-                        onClick={() => setActiveTab(item.id)}
+                        onClick={() => {
+                            console.log('🔘 Sidebar clicked:', item.id, item.label);
+                            setActiveTab(item.id);
+                        }}
                         className={`sidebar-btn ${activeTab === item.id ? 'active' : ''}`}
                         title={isCollapsed ? item.label : undefined}
                         style={{

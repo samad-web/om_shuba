@@ -14,6 +14,7 @@ import { useSettings } from '../../context/SettingsContext';
 import { AdminMessaging, BranchMessaging } from '../../components/dashboard/Messaging';
 
 const AdminDashboard: React.FC = () => {
+    // Force reload for HMR
     const { user } = useAuth();
     const { t } = useSettings();
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -224,14 +225,6 @@ const AdminDashboard: React.FC = () => {
                             <button
                                 className="btn"
                                 style={{ background: 'var(--bg-secondary)', border: 'none', padding: 'var(--space-4)', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-1)' }}
-                                onClick={() => setActiveTab('offers')}
-                            >
-                                <span style={{ fontSize: '1.5rem' }}>🏷️</span>
-                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>Offers</span>
-                            </button>
-                            <button
-                                className="btn"
-                                style={{ background: 'var(--bg-secondary)', border: 'none', padding: 'var(--space-4)', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-1)' }}
                                 onClick={() => setActiveTab('whatsapp')}
                             >
                                 <span style={{ fontSize: '1.5rem' }}>📢</span>
@@ -245,6 +238,7 @@ const AdminDashboard: React.FC = () => {
     );
 
     const renderContent = () => {
+        console.log('AdminDashboard - Current activeTab:', activeTab);
         switch (activeTab) {
             case 'products': return <div className="card animate-fade-in"><ProductMaster branchId={user?.role === 'branch_admin' ? user?.branchId : selectedBranchId} /></div>;
             case 'branches':
@@ -257,7 +251,10 @@ const AdminDashboard: React.FC = () => {
             case 'conversions': return <div className="animate-fade-in"><ConversionOverview /></div>;
             case 'promotions': return <div className="card animate-fade-in"><PromotionManagement /></div>;
             case 'offers': return <div className="card animate-fade-in"><OfferManagement /></div>;
-            case 'whatsapp': return <div className="card animate-fade-in"><CommunityUpdates /></div>;
+            case 'whatsapp':
+                console.log('Rendering WhatsApp Community Updates');
+                return <div className="card animate-fade-in"><CommunityUpdates /></div>;
+            case 'users': return <div className="card animate-fade-in"><h2>Staff Management - Coming Soon</h2></div>;
             case 'dashboard':
             default: return renderDashboard();
         }

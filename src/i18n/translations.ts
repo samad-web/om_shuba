@@ -72,6 +72,9 @@ export const translations: Record<string, any> = {
             qualificationRate: "Qualification Rate",
             demosScheduled: "Demos Scheduled",
             trackPerformance: "Track your captures and lead performance today",
+            serviceReminders: "Proactive Service Reminders",
+            noReminders: "No pending service reminders for your customers.",
+            serviceDue: "{0}-Month Service Due"
         },
         products: {
             title: "Products",
@@ -383,6 +386,9 @@ export const translations: Record<string, any> = {
             qualificationRate: "தகுதி விகிதம்",
             demosScheduled: "திட்டமிடப்பட்ட செயல் காட்சிகள்",
             trackPerformance: "இன்று உங்கள் பதிவுகள் மற்றும் முன்னணி செயல்திறனைக் கண்காணிக்கவும்",
+            serviceReminders: "செயலில் உள்ள சேவை நினைவூட்டல்கள்",
+            noReminders: "உங்கள் வாடிக்கையாளர்களுக்கு நிலுவையில் உள்ள சேவை நினைவூட்டல்கள் எதுவும் இல்லை.",
+            serviceDue: "{0}-மாத சேவை பாக்கி"
         },
         products: {
             title: "தயாரிப்புகள்",

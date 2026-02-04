@@ -1,0 +1,30 @@
+[
+  {
+    "username": "caller1",
+    "branch_id": null
+  },
+  {
+    "username": "admin",
+    "branch_id": null
+  },
+  {
+    "username": "caller2",
+    "branch_id": null
+  },
+  {
+    "username": "admin_periamuthu",
+    "branch_id": "b2"
+  },
+  {
+    "username": "admin_hosur",
+    "branch_id": "b4"
+  },
+  {
+    "username": "admin_attrupalam",
+    "branch_id": "b1"
+  },
+  {
+    "username": "admin_tirupathur",
+    "branch_id": "b3"
+  }
+]

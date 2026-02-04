@@ -9,6 +9,7 @@ import ConversionOverview from './ConversionOverview';
 import UserManagement from './UserManagement';
 import AccountSettings from './AccountSettings';
 import PromotionManagement from '../../components/PromotionManagement';
+import OfferManagement from '../../components/OfferManagement';
 import { dataService } from '../../services/DataService';
 import { downloadBusinessReport } from '../../services/excelService';
 import { useSettings } from '../../context/SettingsContext';
@@ -150,6 +151,7 @@ const OwnerDashboard: React.FC = () => {
             case 'users': return <div className="card" style={{ height: 'auto' }}><UserManagement /></div>;
             case 'settings': return <div className="card" style={{ height: 'auto' }}><AccountSettings /></div>;
             case 'promotions': return <div className="card" style={{ height: 'auto' }}><PromotionManagement /></div>;
+            case 'offers': return <div className="card" style={{ height: 'auto' }}><OfferManagement /></div>;
             case 'dashboard':
             default:
                 return (

@@ -47,7 +47,6 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
 
     const filteredProducts = products.filter(p =>
         p.active &&
-        !['Verification Product', 'Persistent Test Product', 'Test Product RLS'].includes(p.name) &&
         (
             p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||

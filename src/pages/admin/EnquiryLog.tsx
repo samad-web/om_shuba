@@ -9,9 +9,10 @@ import { useSettings } from '../../context/SettingsContext';
 interface EnquiryLogProps {
     role?: 'telecaller' | 'admin' | 'branch_admin';
     branchId?: string;
+    onUpdate?: () => void;
 }
 
-const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
+const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => {
     const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
     const { user } = useAuth();
     const { confirm } = useConfirm();
@@ -78,6 +79,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
             await dataService.updateEnquiryStage(id, newStage, user.id);
             showToast(t('enquiries.stageUpdateSuccess'), 'success');
             loadData();
+            if (onUpdate) onUpdate();
         } catch (error) {
             console.error("Failed to update stage", error);
             showToast('Failed to update stage', 'error');
@@ -89,6 +91,13 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
         if (!user || !selectedEnquiryId) return;
 
         try {
+            console.log("Submitting sale for enquiry:", selectedEnquiryId, {
+                stage: 'Closed-Converted',
+                amount: saleData.amount,
+                warrantyStart: saleData.warrantyStart,
+                warrantyEnd: saleData.warrantyEnd
+            });
+
             // Update stage with all sale details
             await dataService.updateEnquiryStage(
                 selectedEnquiryId,
@@ -103,6 +112,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
             setIsSaleModalOpen(false);
             showToast(t('enquiries.stageUpdateSuccess'), 'success');
             loadData();
+            if (onUpdate) onUpdate();
         } catch (error) {
             console.error("Failed to complete sale", error);
             showToast('Failed to complete sale', 'error');
@@ -123,6 +133,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId }) => {
                 await dataService.deleteEnquiry(id);
                 showToast(t('enquiries.deleteSuccess'), 'success');
                 loadData();
+                if (onUpdate) onUpdate();
             } catch (error) {
                 console.error("Failed to delete enquiry", error);
                 showToast('Failed to delete lead', 'error');
