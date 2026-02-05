@@ -80,6 +80,11 @@ const AdminDashboard: React.FC = () => {
         calculateMetrics();
     }, [selectedBranchId]);
 
+    // Debug: Log activeTab changes
+    useEffect(() => {
+        console.log('🔄 AdminDashboard - activeTab changed to:', activeTab);
+    }, [activeTab]);
+
     const renderDashboard = () => (
         <div className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-8)' }}>
@@ -263,15 +268,19 @@ const AdminDashboard: React.FC = () => {
     return (
         <div style={{ display: 'flex', background: 'var(--bg-app)', minHeight: '100vh', position: 'relative' }}>
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onCollapseChange={setIsCollapsed} />
-            <div style={{
-                flex: 1,
-                padding: '2rem 3rem',
-                marginLeft: isCollapsed ? '80px' : '260px',
-                transition: 'margin-left 300ms ease',
-                minHeight: '100vh',
-                position: 'relative',
-                overflowX: 'hidden'
-            }} className="main-content-wrapper">
+            <div
+                key={activeTab}
+                style={{
+                    flex: 1,
+                    padding: '2rem 3rem',
+                    marginLeft: isCollapsed ? '80px' : '260px',
+                    transition: 'margin-left 300ms ease',
+                    minHeight: '100vh',
+                    position: 'relative',
+                    overflowX: 'hidden'
+                }}
+                className="main-content-wrapper"
+            >
                 {renderContent()}
             </div>
 

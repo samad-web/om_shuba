@@ -7,6 +7,7 @@ export interface User {
   role: UserRole;
   name: string;
   branchId?: string; // For branch_admin role - restricts access to specific branch
+  phone?: string; // Phone number for Exotel calls
   passwordLastChanged?: string; // ISO date string for session invalidation
 }
 
@@ -90,6 +91,10 @@ export interface Enquiry {
   warrantyStartDate?: string;
   warrantyEndDate?: string;
   offerId?: string; // Linked offer
+  // Call statistics
+  totalCalls?: number;
+  lastCallDate?: string;
+  lastCallDuration?: number;
 }
 
 export interface Promotion {
@@ -135,4 +140,27 @@ export interface WhatsAppContent {
   status: 'draft' | 'scheduled' | 'sent';
   createdAt: string;
   createdBy: string;
+}
+
+export type CallStatus = 'initiated' | 'ringing' | 'in-progress' | 'completed' | 'missed' | 'busy' | 'failed' | 'no-answer';
+export type CallDirection = 'outbound' | 'inbound';
+
+export interface CallLog {
+  id: string;
+  exotelCallSid: string;
+  enquiryId?: string;
+  branchId: string;
+  callerId: string;
+  customerPhone: string;
+  telecallerPhone: string;
+  direction: CallDirection;
+  status: CallStatus;
+  duration: number; // in seconds
+  recordingUrl?: string;
+  startTime?: string;
+  endTime?: string;
+  cost?: number;
+  metadata?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
 }
