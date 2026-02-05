@@ -243,7 +243,10 @@ const AdminDashboard: React.FC = () => {
     );
 
     const renderContent = () => {
-        console.log('AdminDashboard - Current activeTab:', activeTab);
+        console.log('🎯 renderContent called with activeTab:', activeTab);
+        console.log('🎯 activeTab type:', typeof activeTab);
+        console.log('🎯 activeTab === "whatsapp":', activeTab === 'whatsapp');
+
         switch (activeTab) {
             case 'products': return <div className="card animate-fade-in"><ProductMaster branchId={user?.role === 'branch_admin' ? user?.branchId : selectedBranchId} /></div>;
             case 'branches':
