@@ -8,6 +8,7 @@ import ConversionOverview from './ConversionOverview';
 import PromotionManagement from '../../components/PromotionManagement';
 import OfferManagement from '../../components/OfferManagement';
 import CommunityUpdates from '../../components/whatsapp/CommunityUpdates';
+import MessageQueue from '../../components/whatsapp/MessageQueue';
 import { useAuth } from '../../context/AuthContext';
 import { dataService } from '../../services/DataService';
 import { useSettings } from '../../context/SettingsContext';
@@ -262,6 +263,8 @@ const AdminDashboard: React.FC = () => {
             case 'whatsapp':
                 console.log('Rendering WhatsApp Community Updates');
                 return <div className="card animate-fade-in"><CommunityUpdates /></div>;
+            case 'message-queue':
+                return <div className="card animate-fade-in"><MessageQueue /></div>;
             case 'users': return <div className="card animate-fade-in"><h2>Staff Management - Coming Soon</h2></div>;
             case 'dashboard':
             default: return renderDashboard();

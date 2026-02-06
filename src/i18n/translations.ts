@@ -165,6 +165,7 @@ export const translations: Record<string, any> = {
             warrantyInfo: "Warranty Info",
             recording: "Recording",
             playRecording: "Play Recording",
+            lockedForEditing: "Locked for editing",
         },
         users: {
             title: "Staff Management",
@@ -270,6 +271,7 @@ export const translations: Record<string, any> = {
             delivered: "Delivered",
             closedConverted: "Closed-Converted",
             closedNotInterested: "Closed-Not Interested",
+            resolved: "Resolved",
         },
         intent: {
             readyToBuy: "Ready to Buy",
@@ -479,6 +481,7 @@ export const translations: Record<string, any> = {
             warrantyInfo: "உத்தரவாத விவரம்",
             recording: "பதிவு",
             playRecording: "பதிவை இயக்கு",
+            lockedForEditing: "திருத்த முடியாது (பூட்டப்பட்டது)",
         },
         users: {
             title: "பணியாளர் மேலாண்மை",
@@ -584,6 +587,7 @@ export const translations: Record<string, any> = {
             delivered: "விநியோகிக்கப்பட்டது",
             closedConverted: "முடிக்கப்பட்டது-மாற்றப்பட்டது",
             closedNotInterested: "முடிக்கப்பட்டது-ஆர்வமில்லை",
+            resolved: "தீர்வு காணப்பட்டது",
         },
         intent: {
             readyToBuy: "வாங்க தயாராக உள்ளது",

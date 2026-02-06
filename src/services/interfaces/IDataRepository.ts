@@ -1,4 +1,4 @@
-import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Message, Offer, WhatsAppContent } from '../../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Message, Offer, WhatsAppContent, WhatsAppQueueItem } from '../../types';
 
 /**
  * Data Repository Interface
@@ -65,4 +65,18 @@ export interface IDataRepository {
     getMessages(branchId: string): Promise<Message[]>;
     getSentMessages(senderRole: string, senderBranchId?: string): Promise<Message[]>;
     markMessageAsRead(messageId: string): Promise<void>;
+
+    // Telephony Operations
+    initiateCall(params: {
+        enquiryId?: string;
+        customerPhone: string;
+        telecallerPhone: string;
+        branchId: string;
+        callerId: string;
+    }): Promise<{ success: boolean; callLog: any; message: string }>;
+
+    // WhatsApp Queue Operations
+    getWhatsAppQueue(): Promise<WhatsAppQueueItem[]>;
+    updateWhatsAppQueueItem(item: Partial<WhatsAppQueueItem> & { id: string }): Promise<void>;
+    deleteWhatsAppQueueItem(id: string): Promise<void>;
 }

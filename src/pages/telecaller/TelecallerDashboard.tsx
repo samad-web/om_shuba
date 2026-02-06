@@ -118,6 +118,33 @@ const TelecallerDashboard: React.FC = () => {
         setTimeout(() => nameInputRef.current?.focus(), 0);
     };
 
+    const handleInitiateCall = async (params: { enquiryId?: string; phoneNumber: string }) => {
+        if (!user) return;
+        if (!user.phone) {
+            showToast("Your phone number is not set. Please contact admin.", 'error');
+            return;
+        }
+
+        try {
+            showToast("Initiating call...", 'info');
+            const result = await dataService.initiateCall({
+                enquiryId: params.enquiryId,
+                customerPhone: params.phoneNumber,
+                telecallerPhone: user.phone,
+                branchId: user.branchId || 'default',
+                callerId: user.id
+            });
+
+            if (result.success) {
+                showToast(result.message, 'success');
+                loadMyEnquiries(); // Refresh to show new call log if any
+            }
+        } catch (error: any) {
+            console.error("Call initiation failed", error);
+            showToast(`Call Failed: ${error.message || 'Unknown error'}`, 'error');
+        }
+    };
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedProduct || !user) return;
@@ -494,12 +521,21 @@ const TelecallerDashboard: React.FC = () => {
                                     )}
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-end' }}>
-                                    <div style={{
-                                        padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700,
-                                        background: e.pipelineStage === 'New' ? '#dcfce7' : '#e0f2fe',
-                                        color: e.pipelineStage === 'New' ? '#15803d' : '#0369a1'
-                                    }}>
-                                        {e.pipelineStage}
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                            className="btn btn-primary"
+                                            style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
+                                            onClick={() => handleInitiateCall({ enquiryId: e.id, phoneNumber: e.phoneNumber })}
+                                        >
+                                            📞 Call
+                                        </button>
+                                        <div style={{
+                                            padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700,
+                                            background: e.pipelineStage === 'New' ? '#dcfce7' : '#e0f2fe',
+                                            color: e.pipelineStage === 'New' ? '#15803d' : '#0369a1'
+                                        }}>
+                                            {e.pipelineStage}
+                                        </div>
                                     </div>
                                     {e.recordingUrl && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -547,6 +583,7 @@ const TelecallerDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <button className="btn btn-primary" style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }} onClick={() => {
+                                        handleInitiateCall({ enquiryId: e.id, phoneNumber: e.phoneNumber });
                                         setCustomerName(e.customerName);
                                         setPhone(e.phoneNumber);
                                         setLocation(e.location);
@@ -555,7 +592,7 @@ const TelecallerDashboard: React.FC = () => {
                                         if (prod) setSelectedProduct(prod);
                                         setCallType('Service');
                                         setComplaintNotes(`${t('telecaller.serviceDue').replace('{0}', type)} (Purchased: ${new Date(e.warrantyStartDate || '').toLocaleDateString()})`);
-                                        showToast('Ready to capture follow-up!', 'success');
+                                        showToast('Call initiated and details loaded!', 'success');
                                         window.scrollTo({ top: document.getElementById('section-products')?.offsetTop || 0, behavior: 'smooth' });
                                     }}>Call Now</button>
                                 </div>

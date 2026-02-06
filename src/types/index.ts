@@ -164,3 +164,16 @@ export interface CallLog {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface WhatsAppQueueItem {
+  id: string;
+  enquiryId?: string;
+  phoneNumber: string;
+  messageText: string;
+  mediaUrl?: string;
+  status: 'draft' | 'queued' | 'sent' | 'failed';
+  scheduledAt?: string;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}

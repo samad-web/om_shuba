@@ -1,4 +1,4 @@
-import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Message, Offer, WhatsAppContent } from '../../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Message, Offer, WhatsAppContent, WhatsAppQueueItem } from '../../types';
 import type { IDataRepository } from '../interfaces/IDataRepository';
 import { MOCK_USERS, MOCK_PRODUCTS, MOCK_BRANCHES } from '../mockData';
 
@@ -325,5 +325,32 @@ export class LocalStorageRepository implements IDataRepository {
 
     async markMessageAsRead(_messageId: string): Promise<void> {
         console.log('Mock mark read');
+    }
+
+    // Telephony Operations
+    async initiateCall(params: any): Promise<{ success: boolean; callLog: any; message: string }> {
+        console.log('Mock initiating call:', params);
+        return {
+            success: true,
+            callLog: { id: 'mock-call-' + Date.now(), ...params },
+            message: 'Mock call initiated!'
+        };
+    }
+
+    // WhatsApp Queue Operations
+    async getWhatsAppQueue(): Promise<WhatsAppQueueItem[]> {
+        return JSON.parse(localStorage.getItem('tc_whatsapp_queue') || '[]');
+    }
+
+    async updateWhatsAppQueueItem(item: Partial<WhatsAppQueueItem> & { id: string }): Promise<void> {
+        const queue = await this.getWhatsAppQueue();
+        const updated = queue.map(q => q.id === item.id ? { ...q, ...item, updatedAt: new Date().toISOString() } : q);
+        localStorage.setItem('tc_whatsapp_queue', JSON.stringify(updated));
+    }
+
+    async deleteWhatsAppQueueItem(id: string): Promise<void> {
+        const queue = await this.getWhatsAppQueue();
+        const filtered = queue.filter(q => q.id !== id);
+        localStorage.setItem('tc_whatsapp_queue', JSON.stringify(filtered));
     }
 }

@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { IDataRepository } from '../interfaces/IDataRepository';
-import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, EnquiryHistory, Offer } from '../../types';
+import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Offer, WhatsAppQueueItem, EnquiryHistory } from '../../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -772,6 +772,74 @@ export class SupabaseRepository implements IDataRepository {
 
     async deleteWhatsAppContent(id: string): Promise<void> {
         const { error } = await this.supabase.from('whatsapp_content').delete().eq('id', id);
+        if (error) throw error;
+    }
+
+    // Telephony Operations
+    async initiateCall(params: {
+        enquiryId?: string;
+        customerPhone: string;
+        telecallerPhone: string;
+        branchId: string;
+        callerId: string;
+    }): Promise<{ success: boolean; callLog: any; message: string }> {
+        const { data, error } = await this.supabase.functions.invoke('initiate-call', {
+            body: params
+        });
+
+        if (error) {
+            console.error("Supabase Function Error (initiate-call):", error);
+            throw error;
+        }
+
+        return data;
+    }
+
+    // WhatsApp Queue Operations
+    async getWhatsAppQueue(): Promise<WhatsAppQueueItem[]> {
+        const { data, error } = await this.supabase
+            .from('whatsapp_queue')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return (data || []).map(item => ({
+            id: item.id,
+            enquiryId: item.enquiry_id,
+            phoneNumber: item.phone_number,
+            messageText: item.message_text,
+            mediaUrl: item.media_url,
+            status: item.status,
+            scheduledAt: item.scheduled_at,
+            errorMessage: item.error_message,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at
+        }));
+    }
+
+    async updateWhatsAppQueueItem(item: Partial<WhatsAppQueueItem> & { id: string }): Promise<void> {
+        const updateData: any = {};
+        if (item.status) updateData.status = item.status;
+        if (item.scheduledAt) updateData.scheduled_at = item.scheduledAt;
+        if (item.messageText) updateData.message_text = item.messageText;
+        if (item.mediaUrl) updateData.media_url = item.mediaUrl;
+
+        updateData.updated_at = new Date().toISOString();
+
+        const { error } = await this.supabase
+            .from('whatsapp_queue')
+            .update(updateData)
+            .eq('id', item.id);
+
+        if (error) throw error;
+    }
+
+    async deleteWhatsAppQueueItem(id: string): Promise<void> {
+        const { error } = await this.supabase
+            .from('whatsapp_queue')
+            .delete()
+            .eq('id', id);
+
         if (error) throw error;
     }
 }

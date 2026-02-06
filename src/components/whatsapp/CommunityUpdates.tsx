@@ -137,6 +137,18 @@ const CommunityUpdates: React.FC = () => {
                                 {update.status}
                             </span>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button className="btn" title="Reuse/Duplicate" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => {
+                                    setEditingUpdate(null);
+                                    setFormData({
+                                        title: `Copy of ${update.title}`,
+                                        content: update.content,
+                                        mediaUrl: update.mediaUrl || '',
+                                        mediaType: update.mediaType || 'image',
+                                        scheduledAt: '',
+                                        status: 'draft'
+                                    });
+                                    setIsModalOpen(true);
+                                }}>📋</button>
                                 <button className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => handleOpenModal(update)}>✏️</button>
                                 <button className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', color: '#dc2626' }} onClick={() => handleDelete(update.id)}>🗑️</button>
                             </div>

@@ -51,6 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                 { id: 'promotions', label: t('nav.promotions'), icon: '📢' },
                 { id: 'offers', label: 'Offers', icon: '🏷️' },
                 { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+                { id: 'message-queue', label: 'Message Queue', icon: '📩' },
                 { id: 'users', label: t('nav.users'), icon: '👥' },
             ];
         }
@@ -58,10 +59,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
             return [
                 { id: 'dashboard', label: t('nav.dashboard'), icon: '🏢' },
                 { id: 'enquiries', label: t('nav.enquiries'), icon: '📑' },
+                { id: 'conversions', label: t('nav.conversions'), icon: '💰' },
+                { id: 'message-queue', label: 'Message Queue', icon: '📩' },
                 { id: 'products', label: t('nav.products'), icon: '📦' },
                 { id: 'promotions', label: t('nav.promotions'), icon: '📢' },
                 { id: 'offers', label: 'Offers', icon: '🏷️' },
-                { id: 'conversions', label: t('nav.conversions'), icon: '💰' },
             ];
         }
         if (user?.role === 'telecaller') {

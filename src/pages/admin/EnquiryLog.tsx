@@ -183,6 +183,33 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
         }
     };
 
+    const handleInitiateCall = async (params: { enquiryId?: string; phoneNumber: string }) => {
+        if (!user) return;
+        if (!user.phone) {
+            showToast("Your phone number is not set. Please contact admin.", 'error');
+            return;
+        }
+
+        try {
+            showToast("Initiating call...", 'info');
+            const result = await dataService.initiateCall({
+                enquiryId: params.enquiryId,
+                customerPhone: params.phoneNumber,
+                telecallerPhone: user.phone,
+                branchId: branchId || user.branchId || 'default',
+                callerId: user.id
+            });
+
+            if (result.success) {
+                showToast(result.message, 'success');
+                loadData();
+            }
+        } catch (error: any) {
+            console.error("Call initiation failed", error);
+            showToast(`Call Failed: ${error.message || 'Unknown error'}`, 'error');
+        }
+    };
+
     if (loading) return <div>{t('common.loading')}</div>;
 
     const getWarrantyStatus = (e: Enquiry) => {
@@ -244,7 +271,17 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
                                     <div style={{ fontWeight: 600 }}>{e.customerName}</div>
-                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{e.phoneNumber}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        {e.phoneNumber}
+                                        <button
+                                            className="btn"
+                                            style={{ padding: '2px 4px', fontSize: '0.7rem' }}
+                                            onClick={() => handleInitiateCall({ enquiryId: e.id, phoneNumber: e.phoneNumber })}
+                                            title="Click to Call"
+                                        >
+                                            📞
+                                        </button>
+                                    </div>
                                     {e.complaintNotes && (
                                         <div style={{ fontSize: '0.75rem', color: '#854d0e', fontStyle: 'italic', marginTop: '0.25rem', background: '#fefce8', padding: '0.2rem 0.4rem', borderRadius: '4px' }}>
                                             📝 {e.complaintNotes}
@@ -301,10 +338,12 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
                                             border: '1px solid var(--border)',
                                             width: '100%',
                                             fontSize: '0.85rem',
-                                            background: e.pipelineStage === 'Closed-Converted' ? '#dcfce7' : e.pipelineStage === 'Resolved' ? '#f0f9ff' : 'white',
-                                            cursor: e.pipelineStage === 'Closed-Converted' ? 'not-allowed' : 'pointer'
+                                            background: (e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') ? '#f3f4f6' : 'white',
+                                            color: (e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') ? '#6b7280' : 'inherit',
+                                            cursor: (e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') ? 'not-allowed' : 'pointer',
+                                            fontWeight: (e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') ? 600 : 400
                                         }}
-                                        disabled={e.pipelineStage === 'Closed-Converted'}
+                                        disabled={e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved'}
                                     >
                                         {[
                                             'New', 'Qualified', 'Forwarded', 'Contacted',
@@ -315,6 +354,11 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
                                             <option key={stage} value={stage}>{getStageLabel(stage)}</option>
                                         ))}
                                     </select>
+                                    {(e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') && (
+                                        <div style={{ marginTop: '0.25rem', fontSize: '0.65rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            🔒 {t('enquiries.lockedForEditing') || 'Locked for editing'}
+                                        </div>
+                                    )}
                                     {e.pipelineStage === 'Closed-Converted' && e.closedAmount !== undefined && (
                                         <div style={{ fontSize: '0.75rem', marginTop: '0.4rem', color: '#059669', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                             <span>💰 Sold: ₹{e.closedAmount.toLocaleString()}</span>
