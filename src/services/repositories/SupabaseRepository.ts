@@ -4,6 +4,7 @@ import type { User, Product, Branch, Enquiry, PipelineStage, Promotion, Offer, W
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const N8N_SALES_WEBHOOK_URL = 'https://n8n.srv930949.hstgr.cloud/webhook-test/e70dabbb-eef9-48b2-ace6-06393d06d98f';
 
 export class SupabaseRepository implements IDataRepository {
     private supabase: SupabaseClient;
@@ -129,6 +130,7 @@ export class SupabaseRepository implements IDataRepository {
     }
 
     async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string): Promise<void> {
+        console.log("SupabaseRepository.updateEnquiryStage called:", { id, stage });
         const updates: any = { pipeline_stage: stage };
         if (amount !== undefined) updates.closed_amount = amount;
         if (warrantyStart !== undefined) updates.warranty_start_date = warrantyStart;
@@ -150,6 +152,35 @@ export class SupabaseRepository implements IDataRepository {
         }]);
 
         if (histError) throw histError;
+
+        // Trigger n8n Webhook for Closed-Converted sales
+        if (stage === 'Closed-Converted') {
+            console.log("Triggering n8n webhook for enquiry:", id);
+            try {
+                // Fetch full enquiry details for n8n
+                const { data: enquiryData } = await this.supabase
+                    .from('enquiries')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (enquiryData) {
+                    console.log("Sending data to n8n:", enquiryData);
+                    // Non-blocking call to n8n
+                    fetch(N8N_SALES_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(enquiryData)
+                    })
+                        .then(res => console.log("n8n response:", res.status))
+                        .catch(e => console.error("Webhook trigger failed", e));
+                } else {
+                    console.error("No enquiry data found for webhook");
+                }
+            } catch (err) {
+                console.error("Failed to fetch enquiry for webhook", err);
+            }
+        }
     }
 
     async deleteEnquiry(id: string): Promise<void> {
