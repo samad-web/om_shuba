@@ -1,0 +1,181 @@
+{
+  "name": "Sales Conversion Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook-test/e70dabbb-eef9-48b2-ace6-06393d06d98f",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "e70dabbb-eef9-48b2-ace6-06393d06d98f"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message_text",
+              "value": "Hello {{ $json.customer_name }}, thank you for your purchase of {{ $json.product_id }}. We are excited to have you on board! Your warranty starts from {{ $json.warranty_start_date }}."
+            },
+            {
+              "name": "phone_number",
+              "value": "={{ $json.phone_number }}"
+            },
+            {
+              "name": "enquiry_id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Prepare Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        450,
+        300
+      ],
+      "id": "prepare-message"
+    },
+    {
+      "parameters": {
+        "table": "whatsapp_queue",
+        "columns": "enquiry_id, phone_number, message_text, status",
+        "options": {}
+      },
+      "name": "Supabase - Add to Queue",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      },
+      "id": "supabase-add-queue"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_EVOLUTION_API_URL/message/sendText/YOUR_INSTANCE_NAME",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $node['Prepare Message'].json.phone_number }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $node['Prepare Message'].json.message_text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        850,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_EVOLUTION_API_CREDENTIAL_ID",
+          "name": "Evolution API"
+        }
+      },
+      "id": "send-whatsapp"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "whatsapp_queue",
+        "rowId": "={{ $node['Supabase - Add to Queue'].json.id }}",
+        "columns": "status",
+        "options": {}
+      },
+      "name": "Supabase - Mark Sent",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        300
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      },
+      "id": "supabase-mark-sent"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Message": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Add to Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase - Add to Queue": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Mark Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase - Mark Sent": {
+        "main": [
+            []
+        ]
+    }
+  }
+}
