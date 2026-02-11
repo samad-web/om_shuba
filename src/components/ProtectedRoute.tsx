@@ -8,7 +8,14 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
-    const { user, loading } = useAuth();
+    const auth = useAuth();
+
+    if (!auth) {
+        console.error("Auth context is missing! Check if ProtectedRoute is inside AuthProvider.");
+        return <div>Authentication Error</div>;
+    }
+
+    const { user, loading } = auth;
 
     if (loading) return <div>Loading...</div>;
 

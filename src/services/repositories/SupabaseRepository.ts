@@ -129,12 +129,13 @@ export class SupabaseRepository implements IDataRepository {
         }
     }
 
-    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string): Promise<void> {
-        console.log("SupabaseRepository.updateEnquiryStage called:", { id, stage });
+    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string, offerId?: string | null): Promise<void> {
+        console.log("SupabaseRepository.updateEnquiryStage called:", { id, stage, offerId });
         const updates: any = { pipeline_stage: stage };
         if (amount !== undefined) updates.closed_amount = amount;
         if (warrantyStart !== undefined) updates.warranty_start_date = warrantyStart;
         if (warrantyEnd !== undefined) updates.warranty_end_date = warrantyEnd;
+        if (offerId !== undefined) updates.offer_id = offerId;
 
         const { error: enqError } = await this.supabase
             .from('enquiries')
@@ -352,7 +353,7 @@ export class SupabaseRepository implements IDataRepository {
         const { data, error } = await this.supabase
             .from('products')
             .select('*')
-            .eq('branch_id', branchId);
+            .or(`branch_id.eq.${branchId},branch_id.is.null`);
         if (error) throw error;
         return (data || []).map(this.mapProduct);
     }
@@ -421,7 +422,8 @@ export class SupabaseRepository implements IDataRepository {
     async updateProduct(product: Product): Promise<void> {
         const { error } = await this.supabase
             .from('products')
-            .update({
+            .upsert({
+                id: product.id,
                 sku: product.sku,
                 name: product.name,
                 category: product.category,
@@ -435,8 +437,7 @@ export class SupabaseRepository implements IDataRepository {
                 short_description_ta: product.shortDescriptionTa,
                 image_url: product.imageUrl,
                 specifications: product.specifications || {}
-            })
-            .eq('id', product.id);
+            }, { onConflict: 'id' });
         if (error) throw error;
     }
 

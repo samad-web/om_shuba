@@ -61,7 +61,12 @@ const TelecallerDashboard: React.FC = () => {
                 dataService.getProducts(),
                 dataService.getOffers()
             ]);
-            setBranches(branchesData.filter(b => b.active));
+            const activeBranches = branchesData.filter(b => b.active);
+            setBranches(activeBranches);
+            // Auto-select first branch if none selected
+            if (activeBranches.length > 0 && !branchId) {
+                setBranchId(activeBranches[0].id);
+            }
             setProducts(productsData);
             setOffers(offersData.filter(o => o.active));
             await loadMyEnquiries();
@@ -91,23 +96,26 @@ const TelecallerDashboard: React.FC = () => {
                 scheduledDemos: demos
             });
 
-            // Calculate Service Reminders (6 months and 12 months)
+            // Calculate Service Reminders (Proactive 5-month threshold)
             const reminders = all.filter(e => {
                 if (e.pipelineStage !== 'Closed-Converted' || !e.warrantyStartDate) return false;
+
+                // Restrict to telecaller's branch if they are branch-bound
+                if (user.branchId && e.branchId !== user.branchId) return false;
 
                 const start = new Date(e.warrantyStartDate);
                 const now = new Date();
 
-                // Calculate months difference accurately
+                // Calculate month difference more precisely for proactive reminders
                 const yearsDiff = now.getFullYear() - start.getFullYear();
                 const monthsDiff = now.getMonth() - start.getMonth();
                 const totalMonths = yearsDiff * 12 + monthsDiff;
 
-                // Show reminder if it's 6+ months old
-                return totalMonths >= 6;
+                // Show reminder if it's 5+ months old (proactive 1 month before 6m service)
+                return totalMonths >= 5;
             });
-            // Sort by most recent purchase first
-            setServiceReminders(reminders.sort((a, b) => new Date(b.warrantyStartDate!).getTime() - new Date(a.warrantyStartDate!).getTime()));
+            // Sort by "Urgency" - oldest purchases first as they likely have more services due
+            setServiceReminders(reminders.sort((a, b) => new Date(a.warrantyStartDate!).getTime() - new Date(b.warrantyStartDate!).getTime()));
         } catch (error) {
             console.error("Failed to load enquiries", error);
         }
@@ -341,16 +349,18 @@ const TelecallerDashboard: React.FC = () => {
                             className="btn"
                             onClick={() => setShowCatalog(true)}
                             style={{
-                                padding: '0.75rem 1rem',
-                                background: 'var(--bg-card)',
-                                border: '1px solid var(--border)',
+                                padding: '0.75rem 1.25rem',
+                                background: 'var(--primary)',
+                                color: 'white',
+                                border: 'none',
                                 borderRadius: '12px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
-                                fontWeight: 600,
-                                fontSize: '0.9rem',
-                                height: '44px'
+                                fontWeight: 800,
+                                fontSize: '0.95rem',
+                                height: '44px',
+                                boxShadow: '0 4px 12px rgba(22, 163, 74, 0.2)'
                             }}
                         >
                             📖 Catalog
@@ -390,7 +400,6 @@ const TelecallerDashboard: React.FC = () => {
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>{t('branches.preferredBranch')}</label>
                                 <select className="input" value={branchId} onChange={e => setBranchId(e.target.value)} required>
-                                    <option value="">{t('branches.chooseBranch')}</option>
                                     {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                 </select>
                             </div>
@@ -599,8 +608,12 @@ const TelecallerDashboard: React.FC = () => {
                             );
                         })}
                         {serviceReminders.length === 0 && (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                {t('telecaller.noReminders')}
+                            <div style={{ textAlign: 'center', padding: '3rem 2rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                <div style={{ fontSize: '2.5rem', marginBottom: '1rem', filter: 'grayscale(0.5)', opacity: 0.5 }}>🛁</div>
+                                <div>{t('telecaller.noReminders')}</div>
+                                <div style={{ fontSize: '0.75rem', marginTop: '0.5rem', opacity: 0.7 }}>
+                                    Customers usually appear here 5-6 months after purchase for their first service check.
+                                </div>
                             </div>
                         )}
                     </div>

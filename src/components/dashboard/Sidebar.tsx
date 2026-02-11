@@ -115,12 +115,24 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                 </div>
             )}
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-2)',
+                overflowY: isCollapsed ? 'visible' : 'auto',
+                paddingRight: isCollapsed ? '0' : 'var(--space-1)',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+            }} className="sidebar-scroll-area">
                 {navItems.map(item => (
                     <button
                         key={item.id}
                         onClick={() => {
-                            console.log('🔘 Sidebar clicked:', item.id, item.label);
+                            console.log('🔘 Sidebar clicked ID:', item.id);
+                            if (item.id === 'message-queue') {
+                                console.log('📨 MESSAGE QUEUE SELECTED');
+                            }
                             setActiveTab(item.id);
                         }}
                         className={`sidebar-btn ${activeTab === item.id ? 'active' : ''}`}
@@ -139,7 +151,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                             fontSize: '0.9rem',
                             fontWeight: activeTab === item.id ? 700 : 600,
                             cursor: 'pointer',
-                            transition: 'all 200ms ease'
+                            transition: 'all 200ms ease',
+                            flexShrink: 0
                         }}
                     >
                         <span style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center' }}>{item.icon}</span>
@@ -147,49 +160,45 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                     </button>
                 ))}
 
-                {/* Logout Button */}
-                <button
-                    onClick={logout}
-                    className="sidebar-btn logout-btn"
-                    title={isCollapsed ? t('common.logout') : undefined}
-                    style={{
-                        width: '100%',
-                        justifyContent: isCollapsed ? 'center' : 'flex-start',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: isCollapsed ? '0' : 'var(--space-3)',
-                        background: 'transparent',
-                        color: 'var(--text-muted)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        padding: isCollapsed ? 'var(--space-4)' : '0.875rem 1.25rem',
-                        fontSize: '0.9rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 200ms ease',
-                        marginTop: 'auto', // Push to bottom on desktop
-                        paddingLeft: '1.25rem',
-                        paddingRight: '1.25rem'
-                    }}
-                >
-                    <span style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center' }}>🚪</span>
-                    {!isCollapsed && <span>{t('common.logout')}</span>}
-                </button>
+                <div style={{ marginTop: 'auto', paddingTop: 'var(--space-4)' }}>
+                    {/* Settings Toggles for Desktop */}
+                    {!isCollapsed && (
+                        <div style={{ marginBottom: 'var(--space-2)' }}>
+                            <SettingsToggle />
+                        </div>
+                    )}
+
+                    {/* Logout Button */}
+                    <button
+                        onClick={logout}
+                        className="sidebar-btn logout-btn"
+                        title={isCollapsed ? t('common.logout') : undefined}
+                        style={{
+                            width: '100%',
+                            justifyContent: isCollapsed ? 'center' : 'flex-start',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: isCollapsed ? '0' : 'var(--space-3)',
+                            background: 'transparent',
+                            color: 'var(--text-muted)',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: isCollapsed ? 'var(--space-4)' : '0.875rem 1.25rem',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 200ms ease',
+                            paddingLeft: '1.25rem',
+                            paddingRight: '1.25rem'
+                        }}
+                    >
+                        <span style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center' }}>🚪</span>
+                        {!isCollapsed && <span>{t('common.logout')}</span>}
+                    </button>
+                </div>
             </div>
 
-            {/* Desktop Settings Toggle */}
-            <div className="desktop-only-toggle" style={{ marginBottom: 'var(--space-2)' }}>
-                {!isCollapsed ? (
-                    <SettingsToggle />
-                ) : (
-                    <div style={{ padding: '0.5rem', display: 'flex', justifyContent: 'center' }}>
-                        {/* Minimal indicator or just hidden when collapsed if complex */}
-                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)' }} title="Settings active" />
-                    </div>
-                )}
-            </div>
-
-            {/* Toggle Button */}
+            {/* Toggle Button for Desktop - Not in scroll area to stay fixed */}
             <button
                 onClick={handleToggleCollapse}
                 className="sidebar-toggle-btn"
@@ -206,7 +215,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    transition: 'all 200ms ease'
+                    transition: 'all 200ms ease',
+                    flexShrink: 0
                 }}
             >
                 <span style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 300ms ease' }}>
@@ -247,6 +257,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                     border-color: var(--primary);
                 }
 
+                .sidebar-scroll-area::-webkit-scrollbar {
+                    display: none;
+                }
+
                 @media (max-width: 1024px) {
                     .sidebar-nav { width: 80px !important; }
                     .sidebar-nav span:not(:first-child) { display: none !important; }
@@ -267,30 +281,45 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onCollapseCh
                         border-radius: 0 !important;
                         border-top: 1px solid var(--border) !important;
                         border-right: none !important;
-                        overflow: hidden !important; /* Contain the scrollable area */
+                        overflow: visible !important;
                     }
-                    .sidebar-nav > div:nth-child(2) { 
+                    .sidebar-nav .sidebar-scroll-area { 
                         flex-direction: row !important; 
-                        align-items: center; 
+                        align-items: center !important;
                         margin: 0 !important; 
                         width: 100%;
-                        overflow-x: auto !important; /* Enable horizontal scroll */
+                        overflow-x: auto !important;
                         overflow-y: hidden !important;
                         -webkit-overflow-scrolling: touch;
-                        scrollbar-width: none; /* Firefox */
-                        -ms-overflow-style: none; /* IE/Edge */
+                        scrollbar-width: none;
+                        -ms-overflow-style: none;
                         gap: 0.25rem !important;
                         padding: 0 0.5rem;
                     }
-                    .sidebar-nav > div:nth-child(2)::-webkit-scrollbar {
-                        display: none; /* Chrome/Safari */
+                    .sidebar-nav .sidebar-scroll-area::-webkit-scrollbar {
+                        display: none;
+                    }
+                    .sidebar-nav .sidebar-scroll-area > div:last-child {
+                        display: flex !important;
+                        flex-direction: row !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        align-items: center !important;
+                        gap: 0.5rem !important;
+                        height: 100%;
+                    }
+                    .sidebar-nav .sidebar-scroll-area .desktop-only-toggle {
+                        display: flex !important;
+                        margin: 0 !important;
+                    }
+                    .sidebar-nav .sidebar-scroll-area .sidebar-btn {
+                        height: 50px !important;
+                        margin: 0 !important;
                     }
                     .sidebar-toggle-btn { display: none !important; }
-                    .desktop-only-toggle { display: none !important; }
                     .sidebar-btn { 
-                        flex: 0 0 auto !important; /* Prevent shrinking */
+                        flex: 0 0 auto !important;
                         width: 64px !important;
-                        height: 50px; 
                         justify-content: center !important; 
                         padding: 0 !important;
                     }

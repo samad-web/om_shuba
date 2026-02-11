@@ -3,6 +3,7 @@ import type { Product } from '../../types';
 import { dataService } from '../../services/DataService';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
+import { useToast } from '../../components/Toast';
 import { downloadProductTemplate, parseProductExcel, type BulkUploadResult } from '../../services/excelService';
 
 interface ProductMasterProps {
@@ -12,6 +13,7 @@ interface ProductMasterProps {
 const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
     const { user } = useAuth();
     const { t, language } = useSettings();
+    const { showToast } = useToast();
     const [products, setProducts] = useState<Product[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,6 +22,7 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
     const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [isSavingExcel, setIsSavingExcel] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState<Partial<Product>>({
@@ -29,15 +32,21 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
 
     useEffect(() => {
         loadProducts();
-    }, []);
+    }, [branchId]);
 
     const loadProducts = async () => {
         setLoading(true);
         try {
-            const data = branchId && branchId !== 'all'
-                ? await dataService.getProductsByBranch(branchId)
-                : await dataService.getProducts();
-            setProducts(data);
+            // Fetch all products to ensure consistency and bypass any complex repository query issues
+            const allData = await dataService.getProducts();
+
+            // Filter locally: Include global products (no branchId) and products matching this branch
+            if (branchId && branchId !== 'all') {
+                const filtered = allData.filter(p => !p.branchId || p.branchId === branchId);
+                setProducts(filtered);
+            } else {
+                setProducts(allData);
+            }
         } catch (error) {
             console.error("Failed to load products", error);
         } finally {
@@ -45,14 +54,14 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
         }
     };
 
-    const filteredProducts = products.filter(p =>
-        p.active &&
-        (
-            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.category.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-    );
+    const filteredProducts = (products || []).filter(p => {
+        if (!p) return false;
+        const name = (p.name || '').toLowerCase();
+        const sku = (p.sku || '').toLowerCase();
+        const category = (p.category || '').toLowerCase();
+        const search = (searchQuery || '').toLowerCase();
+        return name.includes(search) || sku.includes(search) || category.includes(search);
+    });
 
     const openModal = (product?: Product) => {
         if (product) {
@@ -74,7 +83,12 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
             if (editingProduct) {
                 await dataService.updateProduct({ ...editingProduct, ...formData } as Product);
             } else {
-                await dataService.addProduct({ ...formData, id: 'p' + Date.now(), branchId: (branchId && branchId !== 'all') ? branchId : undefined } as Product);
+                await dataService.addProduct({
+                    ...formData,
+                    id: 'p' + Date.now(),
+                    active: formData.active !== undefined ? formData.active : true,
+                    branchId: (branchId && branchId !== 'all') ? branchId : undefined
+                } as Product);
             }
             setIsModalOpen(false);
             loadProducts();
@@ -114,37 +128,61 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
         }
     };
 
-    const handleConfirmUpload = () => {
+    const handleConfirmUpload = async () => {
         if (!uploadResult) return;
 
-        // Note: bulkUpdateProducts is not in IDataRepository yet.
-        // For now, we'll iterate. Ideally, we should add a bulk method to the repo.
-        // Assuming storage.bulkUpdateProducts logic:
+        setIsSavingExcel(true);
+        let successCount = 0;
+        let failCount = 0;
 
         // Resolve correct branchId
         const effectiveBranchId = (branchId && branchId !== 'all') ? branchId : (user?.role === 'branch_admin' ? user.branchId : undefined);
 
-        const promises = [
-            ...uploadResult.productsToCreate.map(p => {
-                return dataService.addProduct({
-                    ...p,
-                    id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
-                    branchId: effectiveBranchId
-                } as Product);
-            }),
-            ...uploadResult.productsToUpdate.map(p => {
-                return dataService.updateProduct(p);
-            })
-        ];
+        try {
+            // Process Creates
+            for (const p of uploadResult.productsToCreate) {
+                try {
+                    await dataService.addProduct({
+                        ...p,
+                        id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
+                        active: p.active !== undefined ? p.active : true,
+                        branchId: effectiveBranchId
+                    } as Product);
+                    successCount++;
+                } catch (e) {
+                    console.error("Failed to create product during bulk:", p.name, e);
+                    failCount++;
+                }
+            }
 
-        Promise.all(promises).then(() => {
+            // Process Updates
+            for (const p of uploadResult.productsToUpdate) {
+                try {
+                    await dataService.updateProduct(p);
+                    successCount++;
+                } catch (e) {
+                    console.error("Failed to update product during bulk:", p.name, e);
+                    failCount++;
+                }
+            }
+
+            if (failCount === 0) {
+                showToast(`Success: ${successCount} products processed!`, 'success');
+            } else if (successCount > 0) {
+                showToast(`Partial Success: ${successCount} saved, ${failCount} failed.`, 'warning');
+            } else {
+                showToast(`Bulk Save Failed: Check console for details.`, 'error');
+            }
+
             loadProducts();
             setShowConfirmDialog(false);
             setUploadResult(null);
-        }).catch(err => {
-            console.error("Bulk update failed", err);
-            alert("Some items failed to upload");
-        });
+        } catch (error) {
+            console.error("Ultimate bulk failure", error);
+            showToast("Bulk operation encountered a critical error", "error");
+        } finally {
+            setIsSavingExcel(false);
+        }
     };
 
     const handleCancelUpload = () => {
@@ -154,14 +192,14 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
 
     const getLocalizedContent = (product: Product, field: 'name' | 'category' | 'shortDescription'): string => {
         if (language === 'ta') {
-            return (product[`${field}Ta` as keyof Product] as string) || (product[field] as string);
+            return (product[`${field}Ta` as keyof Product] as string) || (product[field] as string) || '';
         }
-        return product[field] as string;
+        return (product[field] as string) || '';
     };
 
     // Group products by category
     const groupedProducts = filteredProducts.reduce((acc, product) => {
-        const category = getLocalizedContent(product, 'category') as string || 'Uncategorized';
+        const category = getLocalizedContent(product, 'category') || 'Uncategorized';
         if (!acc[category]) acc[category] = [];
         acc[category].push(product);
         return acc;
@@ -412,8 +450,10 @@ const ProductMaster: React.FC<ProductMasterProps> = ({ branchId }) => {
                         )}
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                            <button type="button" className="btn" onClick={handleCancelUpload}>Cancel</button>
-                            <button type="button" className="btn btn-primary" onClick={handleConfirmUpload}>Apply Changes</button>
+                            <button type="button" className="btn" onClick={handleCancelUpload} disabled={isSavingExcel}>Cancel</button>
+                            <button type="button" className="btn btn-primary" onClick={handleConfirmUpload} disabled={isSavingExcel} style={{ minWidth: '150px' }}>
+                                {isSavingExcel ? 'Saving Changes...' : 'Apply Changes'}
+                            </button>
                         </div>
                     </div>
                 </div>

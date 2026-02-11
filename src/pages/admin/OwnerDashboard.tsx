@@ -16,6 +16,8 @@ import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { AdminMessaging, BranchMessaging } from '../../components/dashboard/Messaging';
 import SettingsToggle from '../../components/SettingsToggle';
+import CommunityUpdates from '../../components/whatsapp/CommunityUpdates';
+import MessageQueue from '../../components/whatsapp/MessageQueue';
 
 const OwnerDashboard: React.FC = () => {
     const { t } = useSettings();
@@ -34,6 +36,7 @@ const OwnerDashboard: React.FC = () => {
         estPipelineValue: 0,
         topSellers: [] as { name: string, count: number, percent: number }[],
         branchDensity: { name: '', count: 0 },
+        branchDensities: [] as { name: string, density: number, count: number }[],
         leadQuality: 0,
         urgentActions: 0,
         totalRevenue: 0,
@@ -64,10 +67,11 @@ const OwnerDashboard: React.FC = () => {
     const calculateMetrics = async () => {
         setLoading(true);
         try {
-            const [enquiries, products, branches] = await Promise.all([
+            const [enquiries, products, branches, users] = await Promise.all([
                 dataService.getEnquiries(),
                 dataService.getProducts(),
-                dataService.getBranches()
+                dataService.getBranches(),
+                dataService.getUsers()
             ]);
 
             setExportData({ enquiries, products, branches });
@@ -117,10 +121,15 @@ const OwnerDashboard: React.FC = () => {
             }));
 
             // 7. Branch Density
-            const branchCounts: Record<string, number> = {};
-            enquiries.forEach(e => { branchCounts[e.branchId] = (branchCounts[e.branchId] || 0) + 1; });
-            const topBranchEntry = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0];
-            const topBranchName = branches.find(b => b.id === (topBranchEntry?.[0]))?.name || 'Main Office';
+            // Find branch with highest density (Enquiries / Telecallers)
+            const branchesWithDensity = branches.map(b => {
+                const branchLeads = enquiries.filter(e => e.branchId === b.id).length;
+                const branchTelecallers = users.filter(u => u.branchId === b.id && u.role === 'telecaller').length;
+                const density = branchTelecallers > 0 ? branchLeads / branchTelecallers : branchLeads;
+                return { name: b.name, count: branchLeads, density: Number(density.toFixed(1)) };
+            }).sort((a, b) => b.density - a.density);
+
+            const topBranch = branchesWithDensity[0] || { name: 'Main Office', count: 0, density: 0 };
 
             setMetrics({
                 activePipeline: active.length,
@@ -128,7 +137,8 @@ const OwnerDashboard: React.FC = () => {
                 demoFulfillment: fulfillment,
                 estPipelineValue: active.length * 68000,
                 topSellers,
-                branchDensity: { name: topBranchName, count: topBranchEntry?.[1] || 0 },
+                branchDensity: { name: topBranch.name, count: topBranch.density },
+                branchDensities: branchesWithDensity.slice(0, 4),
                 leadQuality: qualityIndex,
                 urgentActions: urgent || 5,
                 totalRevenue: totalRev,
@@ -143,6 +153,7 @@ const OwnerDashboard: React.FC = () => {
     };
 
     const renderContent = () => {
+        console.log('🎯 OwnerDashboard renderContent - activeTab:', activeTab);
         switch (activeTab) {
             case 'products': return <div className="card" style={{ height: 'auto' }}><ProductMaster /></div>;
             case 'branches': return <div className="card" style={{ height: 'auto' }}><BranchMaster /></div>;
@@ -152,6 +163,8 @@ const OwnerDashboard: React.FC = () => {
             case 'settings': return <div className="card" style={{ height: 'auto' }}><AccountSettings /></div>;
             case 'promotions': return <div className="card" style={{ height: 'auto' }}><PromotionManagement /></div>;
             case 'offers': return <div className="card" style={{ height: 'auto' }}><OfferManagement /></div>;
+            case 'whatsapp': return <div className="card animate-fade-in"><CommunityUpdates /></div>;
+            case 'message-queue': return <div className="card animate-fade-in"><MessageQueue /></div>;
             case 'dashboard':
             default:
                 return (
@@ -242,15 +255,40 @@ const OwnerDashboard: React.FC = () => {
                                 <button className="btn" style={{ width: '100%', marginTop: 'auto', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: '10px' }} onClick={() => setActiveTab('conversions')}>View Full Sales Report</button>
                             </div>
 
-                            <div className="card" style={{ height: '100%' }}>
-                                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.25rem' }}>Branch Lead Density</h4>
-                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Geographic distribution of agri-machinery demand.</p>
-                                <div style={{ height: '150px', background: 'rgba(22, 163, 74, 0.05)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <div style={{ width: '80%', height: '80%', background: 'url("https://upload.wikimedia.org/wikipedia/commons/e/ea/Blank_map_of_Tamil_Nadu.svg") center/contain no-repeat', opacity: 0.2, filter: 'hue-rotate(90deg)' }}></div>
+                            <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                    <div>
+                                        <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.25rem' }}>Branch Lead Density</h4>
+                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Top Activity Zones</p>
+                                    </div>
+                                    <div style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '0.35rem 0.65rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 800 }}>
+                                        {metrics.branchDensity.count} Density
+                                    </div>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.25rem' }}>
-                                    <div style={{ fontSize: '0.8rem' }}><strong>{metrics.branchDensity.name}</strong><br /><span style={{ color: 'var(--text-muted)' }}>Top Activity Zone</span></div>
-                                    <div style={{ background: '#064e3b', color: '#86efac', padding: '0.35rem 0.65rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 800 }}>{metrics.branchDensity.count} leads</div>
+
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {metrics.branchDensities.map((b, i) => (
+                                        <div key={i} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8rem' }}>
+                                                <span style={{ fontWeight: 600 }}>{b.name}</span>
+                                                <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{b.density}</span>
+                                            </div>
+                                            <div style={{ width: '100%', height: '4px', background: 'var(--bg-secondary)', borderRadius: '2px', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    width: `${Math.min((b.density / (metrics.branchDensity.count || 1)) * 100, 100)}%`,
+                                                    height: '100%',
+                                                    background: 'var(--primary)',
+                                                    borderRadius: '2px'
+                                                }} />
+                                            </div>
+                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>{b.count} Total Leads</div>
+                                        </div>
+                                    ))}
+                                    {metrics.branchDensities.length === 0 && (
+                                        <div style={{ height: '150px', background: 'rgba(22, 163, 74, 0.05)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                            No activity data available
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -296,6 +334,45 @@ const OwnerDashboard: React.FC = () => {
                                     <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>Lead Quality Index</div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: 1.4 }}>Percentage of total leads that have been qualified for machinery sales.</div>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Quick Actions Section */}
+                        <div style={{ marginTop: '2rem' }}>
+                            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: '1.125rem', fontWeight: 700 }}>{t('quickActions.title')}</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'var(--space-4)' }}>
+                                <button
+                                    className="btn"
+                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: 'var(--space-5)', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)', borderRadius: '20px' }}
+                                    onClick={() => setActiveTab('whatsapp')}
+                                >
+                                    <span style={{ fontSize: '2rem' }}>📢</span>
+                                    <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>Updates</span>
+                                </button>
+                                <button
+                                    className="btn"
+                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: 'var(--space-5)', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)', borderRadius: '20px' }}
+                                    onClick={() => setActiveTab('message-queue')}
+                                >
+                                    <span style={{ fontSize: '2rem' }}>📩</span>
+                                    <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>Queue</span>
+                                </button>
+                                <button
+                                    className="btn"
+                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: 'var(--space-5)', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)', borderRadius: '20px' }}
+                                    onClick={() => setActiveTab('offers')}
+                                >
+                                    <span style={{ fontSize: '2rem' }}>🏷️</span>
+                                    <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>Offers</span>
+                                </button>
+                                <button
+                                    className="btn"
+                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: 'var(--space-5)', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)', borderRadius: '20px' }}
+                                    onClick={() => setActiveTab('users')}
+                                >
+                                    <span style={{ fontSize: '2rem' }}>👥</span>
+                                    <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>Staff</span>
+                                </button>
                             </div>
                         </div>
                     </>

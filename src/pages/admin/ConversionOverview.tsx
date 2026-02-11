@@ -65,7 +65,7 @@ const ConversionOverview: React.FC = () => {
             </div>
 
             {/* Deals List */}
-            <div className="card">
+            <div className="card card-premium">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <h4 style={{ fontWeight: 800 }}>{t('metrics.recentConvertedDeals')}</h4>
                     <button className="btn" onClick={loadData} style={{ fontSize: '0.75rem' }}>🔄 {t('common.refresh')}</button>
@@ -83,7 +83,7 @@ const ConversionOverview: React.FC = () => {
                         </thead>
                         <tbody>
                             {deals.map(deal => (
-                                <tr key={deal.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                <tr key={deal.id} className="deal-row" style={{ borderBottom: '1px solid var(--border)' }}>
                                     <td style={{ padding: '1rem 0.5rem', fontSize: '0.85rem' }}>
                                         {new Date(deal.createdAt).toLocaleDateString()}
                                     </td>
@@ -110,6 +110,26 @@ const ConversionOverview: React.FC = () => {
                     </table>
                 </div>
             </div>
+
+            <style>
+                {`
+                .card-premium {
+                    transition: all 0.3s ease;
+                }
+                .card-premium:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.2);
+                    border-color: var(--primary) !important;
+                }
+                .deal-row {
+                    transition: all 0.2s ease;
+                }
+                .deal-row:hover {
+                    background-color: rgba(var(--primary-rgb), 0.02) !important;
+                    transform: scale(1.002);
+                }
+                `}
+            </style>
         </div>
     );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Enquiry, PipelineStage, Branch } from '../../types';
+import type { Enquiry, PipelineStage, Branch, Offer } from '../../types';
 import { dataService } from '../../services/DataService';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -25,6 +25,7 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
     const [filterBranch, setFilterBranch] = useState<string>('');
     const [branches, setBranches] = useState<Branch[]>([]);
     const [products, setProducts] = useState<any[]>([]); // To resolve product names
+    const [offers, setOffers] = useState<Offer[]>([]);
 
     // Sale Modal State
     const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
@@ -43,19 +44,45 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
     const loadData = async () => {
         setLoading(true);
         try {
-            const [enquiriesData, branchesData, productsData] = await Promise.all([
+            const [enquiriesData, branchesData, productsData, offersData] = await Promise.all([
                 dataService.getEnquiries(),
                 dataService.getBranches(),
-                dataService.getProducts()
+                dataService.getProducts(),
+                dataService.getOffers()
             ]);
             setEnquiries(enquiriesData);
             setBranches(branchesData);
             setProducts(productsData);
+            setOffers(offersData);
         } catch (error) {
             console.error("Failed to load data", error);
             showToast(t('common.loading') + ' ' + t('common.error'), 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOfferChange = async (enquiryId: string, offerId: string | null) => {
+        if (!user) return;
+        try {
+            const enquiry = enquiries.find(e => e.id === enquiryId);
+            if (!enquiry) return;
+
+            await dataService.updateEnquiryStage(
+                enquiryId,
+                enquiry.pipelineStage,
+                user.id,
+                'Offer attachment updated',
+                undefined,
+                undefined,
+                undefined,
+                offerId
+            );
+            showToast('Offer updated successfully', 'success');
+            loadData();
+        } catch (error) {
+            console.error("Failed to update offer", error);
+            showToast('Failed to update offer', 'error');
         }
     };
 
@@ -108,6 +135,43 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
                 saleData.warrantyStart,
                 saleData.warrantyEnd
             );
+
+            // Trigger n8n webhook with rich data (so n8n doesn't need to fetch from DB)
+            const enquiry = enquiries.find(eq => eq.id === selectedEnquiryId);
+            const product = products.find(p => p.id === enquiry?.productId);
+            const branch = branches.find(b => b.id === enquiry?.branchId);
+
+            if (enquiry) {
+                const payload = {
+                    id: enquiry.id,
+                    customer_name: enquiry.customerName,
+                    phone_number: enquiry.phoneNumber,
+                    product_name: language === 'ta' ? (product?.nameTa || product?.name) : product?.name,
+                    product_description: language === 'ta' ? (product?.shortDescriptionTa || product?.shortDescription) : product?.shortDescription,
+                    demo_url: product?.demoUrl,
+                    branch_name: branch?.name,
+                    branch_contact: branch?.contactNumber,
+                    warranty_start_date: saleData.warrantyStart,
+                    warranty_end_date: saleData.warrantyEnd,
+                    closed_amount: saleData.amount
+                };
+
+                console.log("Triggering n8n webhook with payload:", payload);
+
+                fetch('https://n8n.srv930949.hstgr.cloud/webhook/sales-completion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error(`Webhook failed: ${res.statusText}`);
+                        console.log("Webhook triggered successfully");
+                    })
+                    .catch(err => console.error("Webhook trigger failed", err));
+            }
 
             setIsSaleModalOpen(false);
             showToast(t('enquiries.stageUpdateSuccess'), 'success');
@@ -221,30 +285,78 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
 
     return (
         <div>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
-                <h3>{t('enquiries.title')} {user?.role === 'branch_admin' && user.branchId && <span style={{ color: '#059669', fontWeight: 'normal' }}>({branches.find(b => b.id === user.branchId)?.name})</span>}</h3>
-                <select className="input" style={{ width: 'auto' }} value={filterStage} onChange={e => setFilterStage(e.target.value)}>
-                    <option value="">{t('enquiries.allStages')}</option>
-                    <option value="New">{t('stages.new')}</option>
-                    <option value="Qualified">{t('stages.qualified')}</option>
-                    <option value="Forwarded">{t('stages.forwarded')}</option>
-                    <option value="Contacted">{t('stages.contacted')}</option>
-                    <option value="Demo Scheduled">{t('stages.demoScheduled')}</option>
-                    <option value="Visit Scheduled">{t('stages.visitScheduled')}</option>
-                    <option value="Demo/Visit Done">{t('stages.demoVisitDone')}</option>
-                    <option value="Delivery Scheduled">{t('stages.deliveryScheduled')}</option>
-                    <option value="Delivered">{t('stages.delivered')}</option>
-                    <option value="Closed-Converted">{t('stages.closedConverted')}</option>
-                    <option value="Closed-Not Interested">{t('stages.closedNotInterested')}</option>
-                    <option value="Resolved">Resolved</option>
-                </select>
-                {user?.role !== 'branch_admin' && (
-                    <select className="input" style={{ width: 'auto' }} value={filterBranch} onChange={e => setFilterBranch(e.target.value)}>
-                        <option value="">{t('enquiries.allBranches')}</option>
-                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            <div style={{
+                display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                marginBottom: '1.5rem',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+            }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+                    <span>{t('enquiries.title')}</span>
+                    {user?.role === 'branch_admin' && user.branchId && (
+                        <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.85rem' }}>
+                            ({branches.find(b => b.id === user.branchId)?.name})
+                        </span>
+                    )}
+                </h3>
+
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <select
+                        className="input"
+                        style={{ width: 'auto', minWidth: '160px', height: '42px', borderRadius: '10px' }}
+                        value={filterStage}
+                        onChange={e => setFilterStage(e.target.value)}
+                    >
+                        <option value="">{t('enquiries.allStages')}</option>
+                        <option value="New">{t('stages.new')}</option>
+                        <option value="Qualified">{t('stages.qualified')}</option>
+                        <option value="Forwarded">{t('stages.forwarded')}</option>
+                        <option value="Contacted">{t('stages.contacted')}</option>
+                        <option value="Demo Scheduled">{t('stages.demoScheduled')}</option>
+                        <option value="Visit Scheduled">{t('stages.visitScheduled')}</option>
+                        <option value="Demo/Visit Done">{t('stages.demoVisitDone')}</option>
+                        <option value="Delivery Scheduled">{t('stages.deliveryScheduled')}</option>
+                        <option value="Delivered">{t('stages.delivered')}</option>
+                        <option value="Closed-Converted">{t('stages.closedConverted')}</option>
+                        <option value="Closed-Not Interested">{t('stages.closedNotInterested')}</option>
+                        <option value="Resolved">Resolved</option>
                     </select>
-                )}
-                <button className="btn" onClick={loadData}>{t('enquiries.refresh')}</button>
+
+                    {user?.role !== 'branch_admin' && (
+                        <select
+                            className="input"
+                            style={{ width: 'auto', minWidth: '160px', height: '42px', borderRadius: '10px' }}
+                            value={filterBranch}
+                            onChange={e => setFilterBranch(e.target.value)}
+                        >
+                            <option value="">{t('enquiries.allBranches')}</option>
+                            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                    )}
+
+                    <button
+                        className="btn"
+                        onClick={loadData}
+                        style={{
+                            height: '42px',
+                            padding: '0 1.25rem',
+                            borderRadius: '10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontWeight: 700,
+                            background: 'white',
+                            color: 'black',
+                            border: '1px solid var(--border)',
+                            boxShadow: 'var(--shadow-sm)'
+                        }}
+                    >
+                        🔄 {t('enquiries.refresh')}
+                    </button>
+                </div>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
@@ -258,13 +370,14 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.branch')}</th>
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.recording')}</th>
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.stage')}</th>
+                            <th style={{ padding: '0.75rem' }}>Attached Offer</th>
                             <th style={{ padding: '0.75rem' }}>{t('enquiries.intent')}</th>
                             <th style={{ padding: '0.75rem', textAlign: 'center' }}>{t('common.actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredEnquiries.map(e => (
-                            <tr key={e.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <tr key={e.id} className="enquiry-row" style={{ borderBottom: '1px solid var(--border)' }}>
                                 <td style={{ padding: '0.75rem' }}>
                                     <div>{new Date(e.createdAt).toLocaleDateString()}</div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(e.createdAt).toLocaleTimeString()}</div>
@@ -328,20 +441,25 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
                                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No recording</span>
                                     )}
                                 </td>
-                                <td style={{ padding: '0.75rem' }}>
+                                <td style={{ padding: '1rem 0.75rem', minWidth: '180px' }}>
                                     <select
                                         value={e.pipelineStage}
                                         onChange={(ev) => handleStageChange(e.id, ev.target.value as PipelineStage)}
+                                        className="stage-selector-premium"
                                         style={{
-                                            padding: '0.4rem',
-                                            borderRadius: '8px',
-                                            border: '1px solid var(--border)',
+                                            padding: '0.65rem 0.85rem',
+                                            borderRadius: '12px',
+                                            border: '2px solid var(--border)',
                                             width: '100%',
                                             fontSize: '0.85rem',
-                                            background: (e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') ? '#f3f4f6' : 'white',
-                                            color: (e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') ? '#6b7280' : 'inherit',
+                                            background: (e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') ? 'var(--bg-secondary)' : 'var(--bg-card)',
+                                            color: 'var(--text-main)',
                                             cursor: (e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') ? 'not-allowed' : 'pointer',
-                                            fontWeight: (e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved') ? 600 : 400
+                                            fontWeight: 700,
+                                            boxShadow: 'var(--shadow-sm)',
+                                            textAlign: 'left',
+                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            appearance: 'auto'
                                         }}
                                         disabled={e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved'}
                                     >
@@ -386,7 +504,50 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
                                     )}
                                 </td>
                                 <td style={{ padding: '0.75rem' }}>
-                                    <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'var(--bg-secondary)' }}>{getIntentLabel(e.purchaseIntent)}</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <select
+                                            className="input"
+                                            style={{ fontSize: '0.75rem', padding: '0.2rem', height: 'auto', minWidth: '120px' }}
+                                            value={e.offerId || ''}
+                                            onChange={(ev) => handleOfferChange(e.id, ev.target.value || null)}
+                                            disabled={e.pipelineStage === 'Closed-Converted' || e.pipelineStage === 'Resolved'}
+                                        >
+                                            <option value="">No Offer</option>
+                                            {offers.filter(o => o.active || o.id === e.offerId).map(o => (
+                                                <option key={o.id} value={o.id}>{o.title}</option>
+                                            ))}
+                                        </select>
+                                        {e.offerId && (
+                                            <div style={{ fontSize: '0.7rem' }}>
+                                                {(() => {
+                                                    const offer = offers.find(o => o.id === e.offerId);
+                                                    if (!offer) return <span style={{ color: 'var(--text-muted)' }}>Offer removed</span>;
+                                                    return (
+                                                        <div style={{ background: 'rgba(var(--primary-rgb), 0.1)', padding: '0.25rem', borderRadius: '4px', border: '1px solid rgba(var(--primary-rgb), 0.2)' }}>
+                                                            <div style={{ fontWeight: 600, color: 'var(--primary)' }}>
+                                                                {offer.discountAmount ? `₹${offer.discountAmount} Off` : `${offer.discountPercentage}% Off`}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
+                                    </div>
+                                </td>
+                                <td style={{ padding: '0.75rem' }}>
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        padding: '0.35rem 0.65rem',
+                                        borderRadius: '8px',
+                                        background: 'var(--bg-secondary)',
+                                        fontWeight: 800,
+                                        color: 'var(--text-main)',
+                                        display: 'inline-block',
+                                        minWidth: '100px',
+                                        textAlign: 'center'
+                                    }}>
+                                        {getIntentLabel(e.purchaseIntent)}
+                                    </span>
                                 </td>
                                 <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                                     <button
@@ -454,6 +615,27 @@ const EnquiryLog: React.FC<EnquiryLogProps> = ({ role, branchId, onUpdate }) => 
                                 <button type="submit" className="btn btn-primary">Mark as Sold</button>
                             </div>
                         </form>
+                        <style>
+                            {`
+                .enquiry-row {
+                    transition: all 0.2s ease;
+                }
+                .enquiry-row:hover {
+                    background-color: rgba(var(--primary-rgb), 0.02) !important;
+                    transform: scale(1.002);
+                }
+                .stage-selector-premium:hover:not(:disabled) {
+                    border-color: var(--primary) !important;
+                    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
+                    transform: translateY(-1px);
+                }
+                .stage-selector-premium:focus {
+                    outline: none;
+                    border-color: var(--primary) !important;
+                    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.2);
+                }
+                `}
+                        </style>
                     </div>
                 </div>
             )}

@@ -20,7 +20,7 @@ const BranchMaster: React.FC = () => {
     });
 
     // Performance Metrics
-    const [metrics, setMetrics] = useState<Record<string, { total: number, converted: number, active?: number, rate: number, rank: number }>>({});
+    const [metrics, setMetrics] = useState<Record<string, { total: number, converted: number, active?: number, rate: number, rank: number, density: number }>>({});
     const [topBranchId, setTopBranchId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -30,9 +30,10 @@ const BranchMaster: React.FC = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [allBranches, allEnquiries] = await Promise.all([
+            const [allBranches, allEnquiries, allUsers] = await Promise.all([
                 dataService.getBranches(),
-                dataService.getEnquiries()
+                dataService.getEnquiries(),
+                dataService.getUsers()
             ]);
 
             // Filter branches
@@ -42,20 +43,26 @@ const BranchMaster: React.FC = () => {
             setBranches(visibleBranches);
 
             // Calculate Metrics
-            const metricsMap: Record<string, { total: number, converted: number, active: number, rate: number, rank: number, score: number }> = {};
+            const metricsMap: Record<string, { total: number, converted: number, active: number, rate: number, rank: number, score: number, density: number }> = {};
 
             visibleBranches.forEach(b => {
                 const branchEnquiries = allEnquiries.filter(e => e.branchId === b.id);
+                const branchTelecallers = allUsers.filter(u => u.branchId === b.id && u.role === 'telecaller').length;
+
                 const total = branchEnquiries.length;
                 const converted = branchEnquiries.filter(e => e.pipelineStage === 'Closed-Converted').length;
-                // Active: Not closed (any stage that isn't Converted or Not Interested)
                 const active = branchEnquiries.filter(e => !['Closed-Converted', 'Closed-Not Interested'].includes(e.pipelineStage)).length;
 
                 const rate = total > 0 ? Math.round((converted / total) * 100) : 0;
+
+                // Lead Density = Total Enquiries / Active Telecallers
+                // Fallback: Total Enquiries / Branch Count is 1 since we are looking at specific branch anyway
+                const density = branchTelecallers > 0 ? Number((total / branchTelecallers).toFixed(1)) : total;
+
                 // Weighted score: conversion rate (70%) + volume factor (30%)
                 const score = (rate * 0.7) + (Math.min(total, 50) * 0.6);
 
-                metricsMap[b.id] = { total, converted, active, rate, rank: 0, score };
+                metricsMap[b.id] = { total, converted, active, rate, rank: 0, score, density };
             });
 
             // Calculate Ranks
@@ -77,7 +84,55 @@ const BranchMaster: React.FC = () => {
         }
     };
 
-    // ... (keep openModal and others) ...
+    const openModal = (branch?: Branch) => {
+        if (branch) {
+            setEditingBranch(branch);
+            setFormData(branch);
+        } else {
+            setEditingBranch(null);
+            setFormData({ name: '', location: '', contactNumber: '', active: true });
+        }
+        setIsModalOpen(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (editingBranch) {
+                await dataService.updateBranch({ ...editingBranch, ...formData } as Branch);
+            } else {
+                await dataService.addBranch({ ...formData, id: 'b' + Date.now() } as Branch);
+            }
+            setIsModalOpen(false);
+            loadData();
+            showToast(t('common.success'), 'success');
+        } catch (error) {
+            console.error("Failed to save branch", error);
+            showToast(t('common.error'), 'error');
+        }
+    };
+
+    const toggleStatus = async (branch: Branch) => {
+        try {
+            await dataService.updateBranch({ ...branch, active: !branch.active });
+            loadData();
+        } catch (error) {
+            console.error("Failed to toggle status", error);
+        }
+    };
+
+    const deleteBranch = async (branch: Branch) => {
+        if (await confirm({ title: t('common.delete'), message: 'Are you sure you want to delete this branch?' })) {
+            try {
+                await dataService.deleteBranch(branch.id);
+                loadData();
+                showToast(t('common.success'), 'success');
+            } catch (error) {
+                console.error("Failed to delete branch", error);
+                showToast(t('common.error'), 'error');
+            }
+        }
+    };
 
     const getPerformanceColor = (rate: number) => {
         if (rate >= 40) return '#16a34a'; // Green
@@ -93,7 +148,19 @@ const BranchMaster: React.FC = () => {
                     <button
                         onClick={() => loadData()}
                         className="btn"
-                        style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                        style={{
+                            fontSize: '0.85rem',
+                            padding: '0.4rem 1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            fontWeight: 700,
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px var(--primary-glow)'
+                        }}
                         title="Re-analyze branch performance"
                     >
                         🔄 Refresh Analysis
@@ -111,6 +178,7 @@ const BranchMaster: React.FC = () => {
                         <th style={{ padding: '0.5rem' }}>{t('branches.location')}</th>
                         <th style={{ padding: '0.5rem' }}>{t('branches.contactNumber')}</th>
                         <th style={{ padding: '0.5rem' }}>{t('common.status')}</th>
+                        <th style={{ padding: '0.5rem' }}>{t('metrics.branchDensity')}</th>
                         <th style={{ padding: '0.5rem', width: '200px' }}>Performance</th>
                         <th style={{ padding: '0.5rem' }}>{t('common.actions')}</th>
                     </tr>
@@ -130,6 +198,9 @@ const BranchMaster: React.FC = () => {
                                     {b.active ? t('common.active') : t('common.inactive')}
                                 </span>
                             </td>
+                            <td style={{ padding: '0.5rem', fontWeight: 700, color: 'var(--primary)' }}>
+                                {metrics[b.id]?.density || 0}
+                            </td>
                             <td style={{ padding: '0.5rem', width: '200px' }}>
                                 {/* Performance Visual */}
                                 {(() => {
@@ -144,14 +215,15 @@ const BranchMaster: React.FC = () => {
                                                     <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{m.rate}%</span>
                                                     {isTop && <span className="animate-pulse" style={{ fontSize: '0.8rem' }}>👑</span>}
                                                 </div>
-                                                <div style={{ width: '100%', height: '6px', background: 'var(--bg-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
+                                                <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
                                                     <div className="performance-bar" style={{
-                                                        width: `${m.rate}%`,
+                                                        width: `${Math.min((m.density / (metrics[topBranchId || '']?.density || 1)) * 100, 100)}%`,
                                                         height: '100%',
-                                                        background: isTop ? `linear-gradient(90deg, ${color}, #fbbf24)` : color,
-                                                        borderRadius: '3px',
-                                                        transition: 'width 1s ease-out',
-                                                        boxShadow: isTop ? '0 0 8px rgba(251, 191, 36, 0.5)' : 'none'
+                                                        background: isTop ? `linear-gradient(90deg, var(--primary), #fbbf24)` : 'var(--primary)',
+                                                        borderRadius: '4px',
+                                                        transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                        boxShadow: isTop ? '0 0 12px rgba(251, 191, 36, 0.4)' : 'none',
+                                                        opacity: m.total > 0 ? 1 : 0.3
                                                     }} />
                                                 </div>
                                             </div>
@@ -196,15 +268,32 @@ const BranchMaster: React.FC = () => {
                                 })()}
                             </td>
                             <td style={{ padding: '0.5rem' }}>
-                                <button className="btn" style={{ fontSize: '0.8rem', marginRight: '0.5rem' }} onClick={() => openModal(b)}>{t('common.edit')}</button>
-                                <button className="btn" style={{ fontSize: '0.8rem', marginRight: '0.5rem', color: b.active ? 'var(--danger)' : 'var(--success)' }} onClick={() => toggleStatus(b)}>
-                                    {b.active ? t('branches.disable') : t('branches.enable')}
-                                </button>
-                                {user?.role !== 'branch_admin' && (
-                                    <button className="btn" style={{ fontSize: '0.8rem', color: '#dc2626', background: '#fee2e2' }} onClick={() => deleteBranch(b)}>
-                                        {t('common.delete')}
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap' }}>
+                                    <button className="btn" style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', borderRadius: '6px' }} onClick={() => openModal(b)}>{t('common.edit')}</button>
+                                    <button className="btn" style={{
+                                        fontSize: '0.75rem',
+                                        padding: '0.35rem 0.75rem',
+                                        borderRadius: '6px',
+                                        color: b.active ? '#ef4444' : '#22c55e',
+                                        background: b.active ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                                        border: b.active ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid rgba(34, 197, 94, 0.2)'
+                                    }} onClick={() => toggleStatus(b)}>
+                                        {b.active ? t('branches.disable') : t('branches.enable')}
                                     </button>
-                                )}
+                                    {user?.role !== 'branch_admin' && (
+                                        <button className="btn" style={{
+                                            fontSize: '0.75rem',
+                                            padding: '0.35rem 0.75rem',
+                                            borderRadius: '6px',
+                                            color: '#ef4444',
+                                            background: 'rgba(239, 68, 68, 0.05)',
+                                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                                            fontWeight: 600
+                                        }} onClick={() => deleteBranch(b)}>
+                                            {t('common.delete')}
+                                        </button>
+                                    )}
+                                </div>
                             </td>
                         </tr>
                     ))}

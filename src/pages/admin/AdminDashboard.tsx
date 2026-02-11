@@ -141,30 +141,30 @@ const AdminDashboard: React.FC = () => {
                     title={t('metrics.branchLeads')}
                     value={metrics.branchLeads.toString()}
                     trend={`💰 ${metrics.salesCalls} Sales | 🔧 ${metrics.serviceCalls} Service`}
-                    trendType="neutral"
-                    sparklineData={[30, 45, 40, 60, 55, 75, 80]}
+                    trendType="info"
+                    sparklineData={Array.from({ length: 7 }, () => Math.floor(Math.random() * 40) + 30)}
                 />
                 <StatCard
-                    title="Total Revenue" // I should add this to translations later
+                    title="Total Revenue"
                     value={`₹${metrics.totalRevenue.toLocaleString()}`}
                     trend={`${metrics.closedDeals} Closed Deals`}
                     trendType="up"
-                    sparklineData={[10000, 25000, 18000, 45000, 38000, 65000, 80000]}
+                    sparklineData={Array.from({ length: 7 }, () => Math.floor(Math.random() * 50) + 50)}
                 />
                 <StatCard
                     title={t('metrics.conversion')}
                     value={`${metrics.branchLeads > 0 ? Math.round((metrics.closedDeals / metrics.branchLeads) * 100) : 0}%`}
                     trend={`${metrics.closedDeals} / ${metrics.branchLeads} leads`}
                     trendType="up"
-                    sparklineData={[5, 10, 8, 12, 15, 18, 20]}
+                    sparklineData={Array.from({ length: 7 }, () => Math.floor(Math.random() * 30) + 20)}
                     onClick={() => setActiveTab('conversions')}
                 />
                 <StatCard
                     title={t('metrics.activeInventory')}
                     value={metrics.activeProducts.toString()}
                     trend={t('common.stable')}
-                    trendType="up"
-                    sparklineData={[15, 15, 16, 16, 17, 18, 18]}
+                    trendType="info"
+                    sparklineData={Array.from({ length: 7 }, () => Math.floor(Math.random() * 20) + 70)}
                 />
             </div>
 
@@ -236,6 +236,14 @@ const AdminDashboard: React.FC = () => {
                                 <span style={{ fontSize: '1.5rem' }}>📢</span>
                                 <span style={{ fontWeight: 850, color: '#FFFFFF' }}>Updates</span>
                             </button>
+                            <button
+                                className="btn"
+                                style={{ background: 'var(--bg-secondary)', border: 'none', padding: 'var(--space-4)', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-1)' }}
+                                onClick={() => setActiveTab('message-queue')}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>📩</span>
+                                <span style={{ fontWeight: 850, color: '#FFFFFF' }}>Queue</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -244,9 +252,7 @@ const AdminDashboard: React.FC = () => {
     );
 
     const renderContent = () => {
-        console.log('🎯 renderContent called with activeTab:', activeTab);
-        console.log('🎯 activeTab type:', typeof activeTab);
-        console.log('🎯 activeTab === "whatsapp":', activeTab === 'whatsapp');
+        console.log('🎯 renderContent - activeTab:', activeTab);
 
         switch (activeTab) {
             case 'products': return <div className="card animate-fade-in"><ProductMaster branchId={user?.role === 'branch_admin' ? user?.branchId : selectedBranchId} /></div>;

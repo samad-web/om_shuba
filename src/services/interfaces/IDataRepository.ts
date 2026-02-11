@@ -36,7 +36,7 @@ export interface IDataRepository {
     getEnquiriesByBranch(branchId: string): Promise<Enquiry[]>;
     getEnquiriesByUser(userId: string): Promise<Enquiry[]>;
     addEnquiry(enquiry: Enquiry): Promise<void>;
-    updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string): Promise<void>;
+    updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string, offerId?: string | null): Promise<void>;
     deleteEnquiry(id: string): Promise<void>;
 
     // Promotion Operations

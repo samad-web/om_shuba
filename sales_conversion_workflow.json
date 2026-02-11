@@ -1,10 +1,10 @@
 {
-  "name": "Sales Conversion Workflow",
+  "name": "Sales Conversion Workflow (Robust Version)",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "webhook-test/e70dabbb-eef9-48b2-ace6-06393d06d98f",
+        "path": "sales-completion",
         "responseMode": "lastNode",
         "options": {}
       },
@@ -15,7 +15,7 @@
         250,
         300
       ],
-      "id": "e70dabbb-eef9-48b2-ace6-06393d06d98f"
+      "id": "webhook-sales"
     },
     {
       "parameters": {
@@ -23,15 +23,19 @@
           "string": [
             {
               "name": "message_text",
-              "value": "Hello {{ $json.customer_name }}, thank you for your purchase of {{ $json.product_id }}. We are excited to have you on board! Your warranty starts from {{ $json.warranty_start_date }}."
+              "value": "=🎉 *Congratulations {{ $node[\"Webhook\"].json[\"customer_name\"] }}!*\n\nThank you for choosing Om Shuba for your {{ $node[\"Webhook\"].json[\"product_name\"] }}.\n\n🛡️ *Warranty Details:*\n- Start: {{ $node[\"Webhook\"].json[\"warranty_start_date\"] }}\n- End: {{ $node[\"Webhook\"].json[\"warranty_end_date\"] }}\n\n⚙️ *Product Info:*\n{{ $node[\"Webhook\"].json[\"product_description\"] }}\n\n📖 *Usage Instructions:*\n- Please read the manual carefully before first use.\n- YouTube Demo: {{ $node[\"Webhook\"].json[\"demo_url\"] || 'N/A' }}\n\n📞 *Branch Support:*\nFor any assistance, contact our {{ $node[\"Webhook\"].json[\"branch_name\"] }} team at {{ $node[\"Webhook\"].json[\"branch_contact\"] }}.\n\nWelcome to the Om Shuba family! 🙏"
             },
             {
               "name": "phone_number",
-              "value": "={{ $json.phone_number }}"
+              "value": "={{ $node[\"Webhook\"].json[\"phone_number\"] }}"
             },
             {
               "name": "enquiry_id",
-              "value": "={{ $json.id }}"
+              "value": "={{ $node[\"Webhook\"].json[\"id\"] }}"
+            },
+            {
+              "name": "status",
+              "value": "draft"
             }
           ]
         },
@@ -41,7 +45,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        450,
+        500,
         300
       ],
       "id": "prepare-message"
@@ -52,79 +56,14 @@
         "columns": "enquiry_id, phone_number, message_text, status",
         "options": {}
       },
-      "name": "Supabase - Add to Queue",
+      "name": "Supabase - Add to Queue (Draft)",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        650,
+        750,
         300
       ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
-          "name": "Supabase account"
-        }
-      },
       "id": "supabase-add-queue"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "YOUR_EVOLUTION_API_URL/message/sendText/YOUR_INSTANCE_NAME",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "number",
-              "value": "={{ $node['Prepare Message'].json.phone_number }}"
-            },
-            {
-              "name": "text",
-              "value": "={{ $node['Prepare Message'].json.message_text }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "name": "Send WhatsApp",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
-      "position": [
-        850,
-        300
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "YOUR_EVOLUTION_API_CREDENTIAL_ID",
-          "name": "Evolution API"
-        }
-      },
-      "id": "send-whatsapp"
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "table": "whatsapp_queue",
-        "rowId": "={{ $node['Supabase - Add to Queue'].json.id }}",
-        "columns": "status",
-        "options": {}
-      },
-      "name": "Supabase - Mark Sent",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        1050,
-        300
-      ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
-          "name": "Supabase account"
-        }
-      },
-      "id": "supabase-mark-sent"
     }
   ],
   "connections": {
@@ -143,39 +82,21 @@
       "main": [
         [
           {
-            "node": "Supabase - Add to Queue",
+            "node": "Supabase - Add to Queue (Draft)",
             "type": "main",
             "index": 0
           }
         ]
       ]
-    },
-    "Supabase - Add to Queue": {
-      "main": [
-        [
-          {
-            "node": "Send WhatsApp",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send WhatsApp": {
-      "main": [
-        [
-          {
-            "node": "Supabase - Mark Sent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase - Mark Sent": {
-        "main": [
-            []
-        ]
     }
-  }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": null
+  },
+  "tags": []
 }

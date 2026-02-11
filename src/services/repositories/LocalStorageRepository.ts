@@ -256,7 +256,7 @@ export class LocalStorageRepository implements IDataRepository {
         localStorage.setItem(KEYS.ENQUIRIES, JSON.stringify(enquiries));
     }
 
-    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string): Promise<void> {
+    async updateEnquiryStage(id: string, stage: PipelineStage, userId: string, notes?: string, amount?: number, warrantyStart?: string, warrantyEnd?: string, offerId?: string | null): Promise<void> {
         const enquiries = await this.getEnquiries();
         const updated = enquiries.map(e => {
             if (e.id === id) {
@@ -266,6 +266,7 @@ export class LocalStorageRepository implements IDataRepository {
                     closedAmount: amount !== undefined ? amount : e.closedAmount,
                     warrantyStartDate: warrantyStart !== undefined ? warrantyStart : e.warrantyStartDate,
                     warrantyEndDate: warrantyEnd !== undefined ? warrantyEnd : e.warrantyEndDate,
+                    offerId: offerId !== undefined ? offerId : e.offerId,
                     history: [...e.history, { stage, timestamp: new Date().toISOString(), userId, notes }]
                 };
             }
